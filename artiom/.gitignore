@@ -1,0 +1,4 @@
+data/*
+!data/__init__.py
+model/*
+!model/__init__.py
