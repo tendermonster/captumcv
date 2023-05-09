@@ -1,0 +1,55 @@
+import os
+import shutil
+from setuptools import setup
+from pip._internal import main as pipmain
+
+
+# Utility function to read the README file.
+# Used for the long_description.  It's nice, because now 1) we have a top level
+# README file and 2) it's easier to type in the README file than to put a raw
+# string in below ...
+def read(fname):
+    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+
+
+def download_captum():
+    # downloads a modified version of captum 
+    # that fixes this issue: https://github.com/pytorch/captum/issues/1114#issuecomment-1537145697
+    # if for whatever reason the repository is not available anymore feel free to use 
+    # the original verison of captum by installing it using pip install captum
+    # or make ur own version that fixes the issues if you encounter any
+    pipmain(["install", "gitpython"])
+    if os.path.exists("./captum"):
+        shutil.rmtree("./captum")
+    from git import Repo
+    Repo.clone_from("https://github.com/tendermonster/captum", "./captum")
+    print(os.path.abspath(os.path.curdir))
+    pipmain(["install", "captum/"])
+    shutil.rmtree("./captum")
+
+
+# captum/ installed localy
+# update this list to reflect the dependencies needed
+INSIGHTS_REQUIRES = ["Pillow==9.5.0", "streamlit==1.22.0"]
+
+if __name__ == "__main__":
+    # download the captum
+    download_captum()
+    setup(
+        name="captumcv",
+        version="0.0.1",
+        author="Artiom Blinovas, Babar Ayan, Miau Miau",
+        author_email="1329832095urihgfdkjhgd@gmail.com",
+        description=("Very nice"),
+        license="MIT",
+        keywords="captum pytorch attribution",
+        url="ODO",
+        packages=["captumcv", "tests"],
+        long_description=read("README.md"),
+        classifiers=[
+            "Development Status :: 3 - Alpha",
+            "Topic :: Utilities",
+            "License :: OSI Approved :: BSD License",
+        ],
+        install_requires=INSIGHTS_REQUIRES,
+    )
