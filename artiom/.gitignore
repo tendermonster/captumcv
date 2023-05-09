@@ -5,8 +5,4 @@
 data/*
 !data/__init__.py
 !model/*__init__.py
-<<<<<<< HEAD
 *.zip
-=======
-*.zip
->>>>>>> a1cba596cb14a393ced627df3557c6057d4cc75d
