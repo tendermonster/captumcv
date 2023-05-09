@@ -2,6 +2,10 @@ import streamlit as st
 import os
 from PIL import Image
 
+option_a = st.selectbox(
+    'Choose Attribution Method',
+    ('Integrated gradients', 'Seliency', 'TCAV ', 'GradCam','Neuron Conductance','Neuron Guided Backpropagation','Deconvolution'))
+
 # Using "with" notation
 with st.sidebar:
     st.title("Captum GUI")
@@ -10,17 +14,37 @@ with st.sidebar:
         "choose a device:",
         ("CPU ", "GPU(CUDA)")
     )
-
-
-option_a = st.selectbox(
-    'Choose a algorithm',
-    ('Integrated gradients', 'Seliency', 'TCAV ', 'GradCam','Neuron Conductance','Neuron Guided Backpropagation and Deconvolution'))
+    st.subheader("Filter by Instances")
+    instances = st.selectbox("Instances:",
+        ('All','Correct','Incorrect')
+    )
+    st.subheader("Attribution Method Arguments")
+    if option_a == 'Integrated gradients':
+        method = st.selectbox('method:',
+        ('Gausslegendre','Riemann_left','Riemann_right','Riemann_middle','Riemann_trapezoid'))
+        n_steps = st.number_input('Insert step:',min_value=25, step = 1)
+    if option_a =='Seliency':
+        st.text("without parameter")
+    if option_a =='TCAV':
+        #need parameter from TCAV
+        print()
+    if option_a =='GradCam':
+        #need parameter from GradCam
+        print()
+    if option_a =='Neuron Conductance':
+        #need parameter from Neuron Conductance 
+        print()
+    if option_a =='Neuron Guided Backpropagation':
+        st.text("without parameter")
+    if option_a == 'Deconvolution':
+        st.text("without parameter")
 
 uploaded_files = st.file_uploader("Choose a Modell", accept_multiple_files=True)
 for uploaded_file in uploaded_files:
     bytes_data = uploaded_file.read()
     st.write("filename:", uploaded_file.name)
     st.write(bytes_data)
+
 ## Modell auswählen filechoose
 values = st.slider(
     'Select a range of values',
@@ -29,7 +53,7 @@ st.write('Values:', values)
 
 st.write('You selected:', option_a)
 
-if st.button('yes'):
+if st.button('evalute'):
     path = 'D:/Desktop/group-1/project/testbild.jpg'
     if not os.path.exists(path):
         print("give a user a notification that file path does not exist")
