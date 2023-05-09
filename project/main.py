@@ -4,34 +4,32 @@ from PIL import Image
 # Using "with" notation
 with st.sidebar:
     st.title("Captum GUI")
-    st.selectbox(     "How would you like to be contacted?",
-    ("Email", "Home phone", "Mobile phone")
-)
+    st.selectbox(
+        "How would you like to be contacted?", ("Email", "Home phone", "Mobile phone")
+    )
     add_radio = st.radio(
-        "Choose a shipping method",
-        ("Standard (5-15 days)", "Express (2-5 days)")
+        "Choose a shipping method", ("Standard (5-15 days)", "Express (2-5 days)")
     )
 
 
 option = st.selectbox(
-    'Wählen Sie einen Modell ',
-    ('Modell A', 'Modell B', 'Modell C', 'Modell D'))
+    "Wählen Sie einen Modell ", ("Modell A", "Modell B", "Modell C", "Modell D")
+)
 
 option = st.selectbox(
-    'Wählen Sie einen Algorithmus ',
-    ('Algo A', 'Algo B', 'Algo C', 'Algo D', 'Algo E', 'Algo F'))
+    "Wählen Sie einen Algorithmus ",
+    ("Algo A", "Algo B", "Algo C", "Algo D", "Algo E", "Algo F"),
+)
 
-values = st.slider(
-    'Select a range of values',
-    0.0, 100.0, (25.0, 75.0))
-st.write('Values:', values)
+values = st.slider("Select a range of values", 0.0, 100.0, (25.0, 75.0))
+st.write("Values:", values)
 
-st.write('You selected:', option)
+st.write("You selected:", option)
 
-if st.button('yes'):
-    st.write('Bilder werden verarbeitet')
+if st.button("yes"):
+    st.write("Bilder werden verarbeitet")
 else:
-    st.write('try again')
+    st.write("try again")
 
 # import streamlit as st
 # import numpy as np
@@ -71,7 +69,7 @@ else:
 # # Define the attribution calculation
 # if attribution_method == "Integrated Gradients":
 #     ig = IntegratedGradients(clf.predict_proba)
-#     attributions = ig.attribute(torch.tensor(input_data), torch.tensor([[baseline]*input_data.shape[1]]), 
+#     attributions = ig.attribute(torch.tensor(input_data), torch.tensor([[baseline]*input_data.shape[1]]),
 #                                 n_steps=num_steps)
 #     attributions = attributions.numpy().flatten()
 #     attributions_df = pd.DataFrame({'Feature': range(1, input_data.shape[1]+1),
@@ -106,7 +104,7 @@ else:
 # image_tensor = transform(image).unsqueeze(0)
 
 # # Load the model
-# map_location=torch.device('cpu') 
+# map_location=torch.device('cpu')
 # model = torch.load("resnet18_finetuned.pkl")
 
 # # Define the attribution method
@@ -120,4 +118,4 @@ else:
 # plt.imshow(np.clip(attributions, 0, 1))
 # plt.axis('off')
 # plt.show()
-# # 
+# #
