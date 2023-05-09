@@ -38,7 +38,7 @@ if __name__ == "__main__":
     setup(
         name="captumcv",
         version="0.0.1",
-        author="Artiom Blinovas, Babar Ayan, Miau Miau",
+        author="Artiom Blinovas, Babar Ayan, Manyue Zhang",
         author_email="1329832095urihgfdkjhgd@gmail.com",
         description=("Very nice"),
         license="MIT",

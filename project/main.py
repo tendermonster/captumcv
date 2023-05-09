@@ -1,35 +1,53 @@
 import streamlit as st
+import os
 from PIL import Image
 
 # Using "with" notation
 with st.sidebar:
     st.title("Captum GUI")
-    st.selectbox(
-        "How would you like to be contacted?", ("Email", "Home phone", "Mobile phone")
-    )
+
     add_radio = st.radio(
-        "Choose a shipping method", ("Standard (5-15 days)", "Express (2-5 days)")
+        "choose a device:",
+        ("CPU ", "GPU(CUDA)")
     )
 
 
-option = st.selectbox(
-    "Wählen Sie einen Modell ", ("Modell A", "Modell B", "Modell C", "Modell D")
-)
+option_a = st.selectbox(
+    'Choose a algorithm',
+    ('Integrated gradients', 'Seliency', 'TCAV ', 'GradCam','Neuron Conductance','Neuron Guided Backpropagation and Deconvolution'))
 
-option = st.selectbox(
-    "Wählen Sie einen Algorithmus ",
-    ("Algo A", "Algo B", "Algo C", "Algo D", "Algo E", "Algo F"),
-)
+uploaded_files = st.file_uploader("Choose a Modell", accept_multiple_files=True)
+for uploaded_file in uploaded_files:
+    bytes_data = uploaded_file.read()
+    st.write("filename:", uploaded_file.name)
+    st.write(bytes_data)
+## Modell auswählen filechoose
+values = st.slider(
+    'Select a range of values',
+    0.0, 100.0, (25.0, 75.0))
+st.write('Values:', values)
 
-values = st.slider("Select a range of values", 0.0, 100.0, (25.0, 75.0))
-st.write("Values:", values)
+st.write('You selected:', option_a)
 
-st.write("You selected:", option)
-
-if st.button("yes"):
-    st.write("Bilder werden verarbeitet")
+if st.button('yes'):
+    path = 'D:/Desktop/group-1/project/testbild.jpg'
+    if not os.path.exists(path):
+        print("give a user a notification that file path does not exist")
+    # check if the file format is correct by checking if image is jpg or JPG or png or or or 
+    image = Image.open('D:/Desktop/group-1/project/testbild.jpg')
+    st.image(image, caption='origin Bild')
+    st.write('Bilder werden verarbeitet')
 else:
-    st.write("try again")
+    st.write('try again')
+
+
+try:
+    path = 'D:/Desktop/group-1/project/testbild.jpg'
+    image = Image.open(path)
+except FileNotFoundError as e:
+    print("image error")
+
+
 
 # import streamlit as st
 # import numpy as np
@@ -69,7 +87,7 @@ else:
 # # Define the attribution calculation
 # if attribution_method == "Integrated Gradients":
 #     ig = IntegratedGradients(clf.predict_proba)
-#     attributions = ig.attribute(torch.tensor(input_data), torch.tensor([[baseline]*input_data.shape[1]]),
+#     attributions = ig.attribute(torch.tensor(input_data), torch.tensor([[baseline]*input_data.shape[1]]), 
 #                                 n_steps=num_steps)
 #     attributions = attributions.numpy().flatten()
 #     attributions_df = pd.DataFrame({'Feature': range(1, input_data.shape[1]+1),
@@ -104,7 +122,7 @@ else:
 # image_tensor = transform(image).unsqueeze(0)
 
 # # Load the model
-# map_location=torch.device('cpu')
+# map_location=torch.device('cpu') 
 # model = torch.load("resnet18_finetuned.pkl")
 
 # # Define the attribution method
@@ -118,4 +136,4 @@ else:
 # plt.imshow(np.clip(attributions, 0, 1))
 # plt.axis('off')
 # plt.show()
-# #
+# # 
