@@ -56,7 +56,7 @@ def download_captum():
 
 # captum/ installed localy
 # update this list to reflect the dependencies needed
-INSIGHTS_REQUIRES = ["Pillow==9.5.0", "streamlit==1.22.0"]
+INSIGHTS_REQUIRES = ["Pillow~=9.5.0", "streamlit~=1.22.0"]
 
 if __name__ == "__main__":
     # download the captum
