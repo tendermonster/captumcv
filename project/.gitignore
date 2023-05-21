@@ -1,2 +1,5 @@
 # here we want to exclude files that are not relevant to the repository
 **/*.pkl
+**/*.pth
+**/*.zip
+tinker.py
