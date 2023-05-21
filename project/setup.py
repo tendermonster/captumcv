@@ -28,19 +28,22 @@ def rmtree(top):
 
 
 def download_captum():
-    # downloads a modified version of captum 
+    # downloads a modified version of captum
     # that fixes this issue: https://github.com/pytorch/captum/issues/1114#issuecomment-1537145697
-    # if for whatever reason the repository is not available anymore feel free to use 
+    # if for whatever reason the repository is not available anymore feel free to use
     # the original verison of captum by installing it using pip install captum
     # or make ur own version that fixes the issues if you encounter any
     pipmain(["install", "gitpython"])
 
     # check if is windows, else linux:
-    if os.name == 'nt':
+    if os.name == "nt":
         if os.path.exists(os.path.join(".", "captum")):
             rmtree(os.path.join(".", "captum"))
         from git import Repo
-        Repo.clone_from("https://github.com/tendermonster/captum", os.path.join(".", "captum"))
+
+        Repo.clone_from(
+            "https://github.com/tendermonster/captum", os.path.join(".", "captum")
+        )
         print(os.path.abspath(os.path.curdir))
         pipmain(["install", "captum/"])
         rmtree("./captum")
@@ -48,6 +51,7 @@ def download_captum():
         if os.path.exists("./captum"):
             shutil.rmtree("./captum")
         from git import Repo
+
         Repo.clone_from("https://github.com/tendermonster/captum", "./captum")
         print(os.path.abspath(os.path.curdir))
         pipmain(["install", "captum/"])
