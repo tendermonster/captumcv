@@ -8,7 +8,9 @@ captum/ # contains the modified captum implementation that fixed the plotting bu
 models/ # models are places here and than a custom loader is writen to be used by the gui
     - e.g pytorch_cifar/... #
 
-loaders/ # contains  # prefferebly loaders should end with _loader.py to be automatically identified
+model_weights/ # should contain the corresponding model weights
+
+loaders/ # contains  # preferably loaders should end with _loader.py to be automatically identified
     # use this https://docs.python.org/3/library/abc.html
 
     - abstractModelLoader.py # is an abstract class that requires you to

@@ -1,4 +1,0 @@
-# TODO
-
-- implement the guidelines and made needed adjustements for the code to be modular
-- implement the abstraction layer to use the pytorch models with captum
