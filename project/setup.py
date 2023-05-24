@@ -1,4 +1,5 @@
 import os
+import stat
 import shutil
 from setuptools import setup
 from pip._internal import main as pipmain
@@ -12,25 +13,54 @@ def read(fname):
     return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
 
+def rmtree(top):
+    # some work around to access paths on Windows (access denied)
+    # https://stackoverflow.com/questions/2656322/shutil-rmtree-
+    # fails-on-windows-with-access-is-denied
+    for root, dirs, files in os.walk(top, topdown=False):
+        for name in files:
+            filename = os.path.join(root, name)
+            os.chmod(filename, stat.S_IWUSR)
+            os.remove(filename)
+        for name in dirs:
+            os.rmdir(os.path.join(root, name))
+    os.rmdir(top)
+
+
 def download_captum():
-    # downloads a modified version of captum 
+    # downloads a modified version of captum
     # that fixes this issue: https://github.com/pytorch/captum/issues/1114#issuecomment-1537145697
-    # if for whatever reason the repository is not available anymore feel free to use 
+    # if for whatever reason the repository is not available anymore feel free to use
     # the original verison of captum by installing it using pip install captum
     # or make ur own version that fixes the issues if you encounter any
     pipmain(["install", "gitpython"])
-    if os.path.exists("./captum"):
+
+    # check if is windows, else linux:
+    if os.name == "nt":
+        if os.path.exists(os.path.join(".", "captum")):
+            rmtree(os.path.join(".", "captum"))
+        from git import Repo
+
+        Repo.clone_from(
+            "https://github.com/tendermonster/captum", os.path.join(".", "captum")
+        )
+        print(os.path.abspath(os.path.curdir))
+        pipmain(["install", "captum/"])
+        rmtree("./captum")
+    else:
+        if os.path.exists("./captum"):
+            shutil.rmtree("./captum")
+        from git import Repo
+
+        Repo.clone_from("https://github.com/tendermonster/captum", "./captum")
+        print(os.path.abspath(os.path.curdir))
+        pipmain(["install", "captum/"])
         shutil.rmtree("./captum")
-    from git import Repo
-    Repo.clone_from("https://github.com/tendermonster/captum", "./captum")
-    print(os.path.abspath(os.path.curdir))
-    pipmain(["install", "captum/"])
-    shutil.rmtree("./captum")
 
 
 # captum/ installed localy
 # update this list to reflect the dependencies needed
-INSIGHTS_REQUIRES = ["Pillow==9.5.0", "streamlit==1.22.0"]
+INSIGHTS_REQUIRES = ["Pillow~=9.5.0", "streamlit~=1.22.0"]
 
 if __name__ == "__main__":
     # download the captum
