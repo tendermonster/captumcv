@@ -1,8 +1,7 @@
-from captumcv.loaders.modelLoader import DLASimpleLoader
+from captumcv.loaders.util.modelLoader import DLASimpleLoader
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
-import numpy as np
 import os
 
 if __name__ == "__main__":
