@@ -1,8 +1,10 @@
 import torch
 import torch.backends.cudnn as cudnn
 import os
+from PIL import Image
+import torchvision.transforms as transforms
 from captumcv.models.dla_simple import SimpleDLA
-
+from captum.attr import IntegratedGradients
 
 class ImageModelWrapper:
     """Wrapper base class for image models."""
@@ -16,8 +18,8 @@ class ImageModelWrapper:
         if model_path:
             if os.path.exists(model_path):
                 self.__try_loading_model(model_path)
-            else:
-                raise Exception("Model path does not exist")
+            #else:
+                #raise Exception("Model path does not exist")
         # shape of the input image in this model
         self.image_shape = image_shape
 
@@ -28,6 +30,7 @@ class ImageModelWrapper:
 
     def __try_loading_model(self, model_path: str):
         # prepare model
+        #self.model = self.model[0]
         self.model = self.model.to(self.device)
         try:
             # todo do some checks if file exists or so
