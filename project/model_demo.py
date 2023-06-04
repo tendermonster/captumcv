@@ -1,9 +1,10 @@
-from captumcv.loaders.modelLoader import DLASimpleLoader
+import os
+
 import torch
 import torchvision.transforms as transforms
 from PIL import Image
-import numpy as np
-import os
+
+from captumcv.loaders.DLASimpleLoader import DLASimpleLoader
 
 if __name__ == "__main__":
     model_path = os.path.join(

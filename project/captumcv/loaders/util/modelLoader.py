@@ -1,23 +1,24 @@
+import os
+from typing import List
+
 import torch
 import torch.backends.cudnn as cudnn
-import os
-from PIL import Image
-import torchvision.transforms as transforms
-from captumcv.models.dla_simple import SimpleDLA
-from captum.attr import IntegratedGradients
+
 
 class ImageModelWrapper:
     """Wrapper base class for image models."""
 
-    def __init__(self, image_shape, model_path, model):
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    def __init__(self, image_shape: List[int], model_path: str, model):
+        self.device = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu")
         # loaded model
         self.model = model
         self.model_path = model_path
         print(model_path)
-        if model_path:
-            if os.path.exists(model_path):
-                self.__try_loading_model(model_path)
+
+        
+        if model_path and os.path.exists(model_path):
+            self.__try_loading_model(model_path)
             #else:
                 #raise Exception("Model path does not exist")
         # shape of the input image in this model
@@ -30,7 +31,6 @@ class ImageModelWrapper:
 
     def __try_loading_model(self, model_path: str):
         # prepare model
-        #self.model = self.model[0]
         self.model = self.model.to(self.device)
         try:
             # todo do some checks if file exists or so
@@ -52,12 +52,3 @@ class ImageModelWrapper:
     def get_image_shape(self):
         """returns the shape of an input image."""
         return self.image_shape
-
-
-# example model definition
-class DLASimpleLoader(ImageModelWrapper):
-    def __init__(self, model_path):
-        # TODO somehow automate the selection or import of SimpleDLA class ?
-        model = SimpleDLA()
-        image_shape = [1, 3, 32, 32]
-        super(DLASimpleLoader, self).__init__(image_shape, model_path, model)
