@@ -1,4 +1,3 @@
-
 import os
 from typing import Optional, Tuple
 
@@ -27,9 +26,8 @@ choose_method = st.selectbox(
     ('Integrated gradients', 'Seliency', 'TCAV', 'GradCam', 'Neuron Conductance', 'Neuron Guided Backpropagation', 'Deconvolution'))
 st.write('You selected:', choose_method)
 
-# Modell  und Parameter auswählen
 
-
+## Modell  und Parameter auswählen 
 def parameter_selection():
     if choose_method == "Integrated gradients":
         options = ["Gausslegendre", "Riemann_left",
@@ -50,16 +48,13 @@ def parameter_selection():
     if choose_method == "Seliency":
         st.sidebar.text("without parameter")
     if choose_method == "TCAV":
-        # need parameter from TCAV
-        st.sidebar.write("you choose TCAV")
-
+        #need parameter from TCAV
+        st.sidebar.write("you choose TCAV") 
     if choose_method == "GradCam":
-
-        # need parameter from GradCam
+        #need parameter from GradCam
         st.sidebar.write("you choose GradCam")
-    if choose_method == "Neuron Conductance":
-
-        # need parameter from Neuron Conductance
+    if choose_method =="Neuron Conductance":
+        #need parameter from Neuron Conductance
         st.sidebar.write("you choose Neuron Conductance")
     if choose_method == "Neuron Guided Backpropagation":
         st.sidebar.text("without parameter")
@@ -235,8 +230,9 @@ def main():
     print(model_path)
     # upload model loader
     model_loader_path = upload_file(
-        "Upload a model loader file", os.path.join(".","captumcv","loaders"), accept_multiple_files=False)
+        "Upload a model loader file", os.path.join(".","captumcv","loaders", "tmp"), accept_multiple_files=False)
     # get all available classes from the model loader file
+    print(model_loader_path)
     available_classes = []
     if model_loader_path is not None:
         available_classes = get_class_names_from_file(model_loader_path)

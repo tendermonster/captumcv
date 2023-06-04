@@ -17,11 +17,10 @@ class ImageModelWrapper:
         print(model_path)
 
         
-        if model_path:
-            if os.path.exists(model_path):
-                self.__try_loading_model(model_path)
-            else:
-                raise Exception("Model path does not exist")
+        if model_path and os.path.exists(model_path):
+            self.__try_loading_model(model_path)
+            #else:
+                #raise Exception("Model path does not exist")
         # shape of the input image in this model
         self.image_shape = image_shape
 
@@ -32,7 +31,6 @@ class ImageModelWrapper:
 
     def __try_loading_model(self, model_path: str):
         # prepare model
-
         self.model = self.model.to(self.device)
         try:
             # todo do some checks if file exists or so

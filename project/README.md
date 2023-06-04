@@ -7,3 +7,6 @@
 - $ python setup.py install
 
 - after that the project should have all dependencies it needs
+
+- use to run the streamlit run main.py command to run main.py
+- The website will open automatically
