@@ -94,6 +94,13 @@ def model_loaded_button(uploaded_file):
 def process_image(image_path: str, image_shape: Tuple):
     """
     This method processes the image and returns the tensor of the correct shape.
+
+    Args:
+        image_path (str): path to image
+        image_shape (Tuple): nn model input shape
+
+    Returns:
+        _type_: Tuple[x_img, x_img_before, x_img_inv]
     """
     img = Image.open(image_path)
     transform_test = transforms.Compose(
@@ -137,6 +144,7 @@ def evaluate_button_saliency(input_image_path: str, model_path: str, loader_clas
     # check that the class extends correct subclass
     if model_loader and issubclass(model_loader, ImageModelWrapper):
         instance: ImageModelWrapper = model_loader(model_path)
+        tmp_model = instance.model
         saliency = Saliency(instance.model)
         # saliency = IntegratedGradients(instance.model)
         x_img, x_img_before, x_img_inv = process_image(input_image_path, instance.get_image_shape())
@@ -219,15 +227,15 @@ def main():
     parameter_selection()
     # upload an image to test
     image_path = upload_file(
-        "Upload an image", "./captumcv/image_tmp", accept_multiple_files=False)
+        "Upload an image", os.path.join(".","captumcv","image_tmp"), accept_multiple_files=False)
 
     # upload function for the model
     model_path = upload_file(
-        "Upload a model", "./captumcv/model_weights", accept_multiple_files=False)
+        "Upload a model", os.path.join(".","captumcv","model_weights"), accept_multiple_files=False)
     print(model_path)
     # upload model loader
     model_loader_path = upload_file(
-        "Upload a model loader file", "./captumcv/loaders", accept_multiple_files=False)
+        "Upload a model loader file", os.path.join(".","captumcv","loaders"), accept_multiple_files=False)
     # get all available classes from the model loader file
     available_classes = []
     if model_loader_path is not None:
