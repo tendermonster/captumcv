@@ -3,3 +3,11 @@
 **/*.pth
 **/*.zip
 tinker.py
+
+captumcv/model_weights_bck/*
+
+captumcv/image_tmp/*
+!captumcv/image_tmp/.gitkeep
+
+captumcv/loaders/tmp/*
+!captumcv/loaders/tmp/.gitkeep

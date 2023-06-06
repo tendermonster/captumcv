@@ -1,25 +1,39 @@
-from captumcv.loaders.modelLoader import DLASimpleLoader
-from captumcv.loaders.modelLoader import ImageModelWrapper
-import torch
-import torchvision.transforms as transforms
+import os
+from typing import Optional, Tuple
+
 import numpy as np
 import streamlit as st
-import os
+import torch
+import torchvision.transforms as transforms
+from captum.attr import (
+    GradientShap,
+    IntegratedGradients,
+    NoiseTunnel,
+    Occlusion,
+    Saliency,
+)
+from captum.attr import visualization as viz
 from PIL import Image
 from captum.attr import IntegratedGradients
 
-#Attribution Method auswählen
+from captumcv.loaders.util.classLoader import (
+    get_class_names_from_file,
+    load_class_from_file,
+)
+from captumcv.loaders.util.modelLoader import ImageModelWrapper
+
 choose_method = st.selectbox(
     'Choose Attribution Method',
-    ('Integrated gradients', 'Seliency', 'TCAV', 'GradCam','Neuron Conductance','Neuron Guided Backpropagation','Deconvolution'))
+    ('Integrated gradients', 'Seliency', 'TCAV', 'GradCam', 'Neuron Conductance', 'Neuron Guided Backpropagation', 'Deconvolution'))
 st.write('You selected:', choose_method)
 
 
 ## Modell  und Parameter auswählen 
 def parameter_selection():
     if choose_method == "Integrated gradients":
-        options = ["Gausslegendre","Riemann_left","Riemann_right","Riemann_middle","Riemann_trapezoid"]
-        st.sidebar.selectbox('method:',options)
+        options = ["Gausslegendre", "Riemann_left",
+                   "Riemann_right", "Riemann_middle", "Riemann_trapezoid"]
+        st.sidebar.selectbox('method:', options)
         if options == "Gausslegendre":
             st.write("aaa")
             st.sidebar.write("you choose Gausslegendre as parameter")
@@ -31,7 +45,7 @@ def parameter_selection():
             st.sidebar.write("you choose Riemann_middle as parameter")
         elif options == "Riemann_trapezoid":
             st.sidebar.write("you choose Riemann_trapezoid as parameter")
-        st.sidebar.number_input('Insert step:',min_value=25, step = 1)
+        st.sidebar.number_input('Insert step:', min_value=25, step=1)
     if choose_method == "Seliency":
         st.sidebar.text("without parameter")
     if choose_method == "TCAV":
@@ -43,134 +57,131 @@ def parameter_selection():
     if choose_method =="Neuron Conductance":
         #need parameter from Neuron Conductance
         st.sidebar.write("you choose Neuron Conductance")
-    if choose_method =="Neuron Guided Backpropagation":
+    if choose_method == "Neuron Guided Backpropagation":
         st.sidebar.text("without parameter")
-    if choose_method =="Deconvolution":
+    if choose_method == "Deconvolution":
         st.sidebar.text("without parameter")
 
-# choose_method = st.selectbox(
-#     'Choose Attribution Method',
-#     ('Integrated gradients', 'Seliency', 'TCAV', 'GradCam','Neuron Conductance','Neuron Guided Backpropagation','Deconvolution'))
-# st.write('You selected:', choose_method)
 
-# def transform_image(image):
-#     transform = transforms.Compose([
-#         transforms.Resize((32, 32)),
-#         transforms.ToTensor(),
-#     ])
-#     return transform(image).unsqueeze(0)
-# #ig = IntegratedGradients(model)
+def model_loader_class_button(uploaded_file):
+    # hochladen oder angegebene Path
+    path = 'project/testbild.jpg'
+    image = Image.open(path)
+    st.image(image, caption='origin Bild')
 
-# def compute_attributions(image):
-#     transformed_image = transform_image(image)
-#     attributions, _ = ig.attribute(transformed_image, target=0, return_convergence_delta=True)
-#     return attributions.squeeze().detach().numpy()
+    if uploaded_file is not None:
+        st.write("Image uploaded successfully")
+    else:
+        st.warning("No file uploaded")
 
 
-def img_upload():
-    uploaded_files = st.file_uploader("Choose a Picture", accept_multiple_files=True)
-    images = []
-    for uploaded_file in uploaded_files:
-        if uploaded_file is not None:
-            st.write("Image uploaded successfully")
-            images.append(uploaded_file)
-            st.image(uploaded_file,caption='origin Bild')
-        else:
-            st.warning("No file uploaded")
-    return images
+def model_loaded_button(uploaded_file):
+    # hochladen oder angegebene Path
+    path = 'project/testbild.jpg'
+    image = Image.open(path)
+    st.image(image, caption='origin Bild')
+
+    if uploaded_file is not None:
+        st.write("Image uploaded successfully")
+    else:
+        st.warning("No file uploaded")
 
 
-def model_upload():
-    uploaded_files = st.file_uploader("Choose Model(s)", accept_multiple_files=True)
-    model_paths = []
-    for uploaded_file in uploaded_files:
-        if uploaded_file is not None:
-            st.write("Model uploaded successfully")
-            model_filename = uploaded_file.name
-            model_path = "D:/Desktop/group-1/project/captumcv/model_weights/" + model_filename
-            with open(model_path, "wb") as f:
-                f.write(uploaded_file.getvalue())
-            model_paths.append(model_path)
-        else:
-            st.warning("No file uploaded")
-    return model_paths
+def process_image(image_path: str, image_shape: Tuple):
+    """
+    This method processes the image and returns the tensor of the correct shape.
 
+    Args:
+        image_path (str): path to image
+        image_shape (Tuple): nn model input shape
 
-def compute_attributions(img_list):
-    model = torch.load("D:/Desktop/group-1/project/captumcv/save_models/SimpleDLA_10epochs_cifar10.pth")
-    for image_file in img_list:
-        img = Image.open(image_file)
-    model_path =", ".join(model)
-    #model = torch.load(model_path)
-    ig = IntegratedGradients(model)
-    attributions, _ = ig.attribute(img, target=0, return_convergence_delta=True)
-    return attributions.squeeze().detach().numpy()
-
-def evaluate_button(img_list,model):
-    #ig = IntegratedGradients(model)
-    for image_file in img_list:
-        img = Image.open(image_file)
-    model_path =", ".join(model)
-    
-    #wrapper = ImageModelWrapper(image_shape, model_path, model)
-
-    model_loader = DLASimpleLoader(model_path)
-    #model_loader = IntegratedGradients(model_loader)   
-    #  
-   
+    Returns:
+        _type_: Tuple[x_img, x_img_before, x_img_inv]
+    """
+    img = Image.open(image_path)
     transform_test = transforms.Compose(
         [
             transforms.ToTensor(),
             transforms.Resize((32, 32)),  # in case of cifar10
-            transforms.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010)),
+            transforms.Normalize(
+                mean=(0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010)
+            ),
         ]
     )
-    
-    x_img_test = transform_test(img)
-    x_img_test = torch.reshape(x_img_test, model_loader.get_image_shape())
-    # we may need to normalize the image here
-    #st.write(x_img_test)
-    image_shape = x_img_test.shape
+    x_img_before = transform_test(img)
+    # reshape to correct shape
+    x_img = torch.reshape(x_img_before, image_shape)
 
-    model_loader = ImageModelWrapper(image_shape, model_path, model)
- 
+    inv_normal = transforms.Compose(
+        [
+            transforms.Normalize(mean = [ 0., 0., 0. ],
+                                std = [ 1/0.2023, 1/0.1994, 1/0.2010]),
+        transforms.Normalize(mean = [-0.4914, -0.4822, -0.4465],
+                            std = [ 1., 1., 1. ]),
+        ]
+    )
 
-    
+    x_img_inv = inv_normal(x_img_before)
+
+    return x_img, x_img_before, x_img_inv
 
 
-    #st.write(x_img_test.shape)
-    #y = image_model.predict()
-    y = model_loader.predict(x_img_test)
-    #objekt = ImageModelWrapper(x_img_test.shape,model_path,model_loader)
-    classes = ("plane","car","bird","cat","deer",
-        "dog","frog","horse","ship","truck",)
+# demo this only will work for saliency
+def evaluate_button_saliency(input_image_path: str, model_path: str, loader_class_name: str, model_loader_path: str):
+    """
+    This method runs the captum algorithm and shows the results.
 
-    st.subheader("Input Information")
-    st.text(f"Shape of input image: {x_img_test.shape}")
-    st.text(f"Classes: {classes}")
-    st.text(f"Size of output tensor: {y.size()}")
+    Args:
+        model_path (str): Path to the model weights
+        loader_class_name (str): choosen class loader name
+        model_loader_path (str): model loader python file path
+    """
+    model_loader = load_class_from_file(model_loader_path, loader_class_name)
+    # check that the class extends correct subclass
+    if model_loader and issubclass(model_loader, ImageModelWrapper):
+        instance: ImageModelWrapper = model_loader(model_path)
+        tmp_model = instance.model
+        saliency = Saliency(instance.model)
+        # saliency = IntegratedGradients(instance.model)
+        x_img, x_img_before, x_img_inv = process_image(input_image_path, instance.get_image_shape())
+        attribution = saliency.attribute(x_img, target=0)
+        attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1,2,0))
+        # print(attribution)
+        print(attribution.shape)
+        print(attribution_np.shape) # this does work
+        f, ax = viz.visualize_image_attr_multiple(attribution_np,
+                                      x_img_inv.permute(1, 2, 0).numpy(),
+                                      ["original_image", "heat_map"],
+                                      ["all", "positive"],
+                                      show_colorbar=True,
+                                      outlier_perc=2,
+                                     )
+        
+        st.pyplot(f) # very nice this plots the plt figure !
 
-    st.subheader("Prediction")
-    predicted_class_index = y.argmax()
-    predicted_class = classes[predicted_class_index]
-    st.text(f"Predicted class index: {predicted_class_index}")
-    st.text(f"Predicted class: {predicted_class}")
-    st.write("Evaluation finished")
+        # st.image(attribution_np,caption='origin Bild', width=300)
+        # Now you can work with the dynamically loaded class instance
+        st.write("Evaluation finished")
+    else:
+        st.warning(
+            "Failed to load the class from the file. Try loading the file again")
+
 
 def device_selection():
+    # TODO
     options = ["CPU", "GPU(CUDA)"]
-    selected_devices = st.sidebar.radio("choose a device:",options)
+    selected_devices = st.sidebar.radio("choose a device:", options)
     if selected_devices == "CPU":
-        #"Hier sollen über CPU implementiert werden"
+        # "Hier sollen über CPU implementiert werden"
         st.sidebar.write("you choose CPU")
     elif selected_devices == "GPU(CUDA)":
-        #"Hier sollen über GPU implementiert werden"
+        # "Hier sollen über GPU implementiert werden"
         st.sidebar.write("you choose GPU(CUDA)")
 
 
 def instances_selection():
-    options = ["All","Correct","Incorrect"]
-    selected_instances = st.sidebar.selectbox("Instances:",options)
+    options = ["All", "Correct", "Incorrect"]
+    selected_instances = st.sidebar.selectbox("Instances:", options)
     # Hier sollen über options für Instances implementiert werden
     if selected_instances == "All":
         st.sidebar.write("you choose All")
@@ -180,21 +191,58 @@ def instances_selection():
         st.sidebar.write("you choose Incorrect")
 
 
+def upload_file(title: str, save_path: str, accept_multiple_files=False) -> Optional[str | None]:
+    """
+    This method asks for a file and saves it to the specified path.
+
+    Args:
+        save_path (str): file path to save the uploaded file to.
+    """
+    uploaded_file = st.file_uploader(
+        title, accept_multiple_files=accept_multiple_files)
+    if uploaded_file is not None:
+        full_path = os.path.join(save_path, uploaded_file.name)
+        # To read file as bytes:
+        bytes_data = uploaded_file.getvalue()
+        with open(full_path, "wb") as file:
+            file.write(bytes_data)
+        st.success("File saved successfully")
+        return full_path
+    else:
+        st.warning("No file uploaded")
+        return None
 
 
 def main():
-    
+    # Layout of the sidebar
     st.sidebar.title("Captum GUI")
     device_selection()
     st.sidebar.subheader("Filter by Instances")
     instances_selection()
     st.sidebar.subheader("Attribution Method Arguments")
     parameter_selection()
-    model_loader = model_upload()
-    uploaded_images = img_upload()
-    col1, col2 = st.columns([1, 1])
-    if col1.button("Evaluate"):
-        evaluate_button(uploaded_images, model_loader)
+    # upload an image to test
+    image_path = upload_file(
+        "Upload an image", os.path.join(".","captumcv","image_tmp"), accept_multiple_files=False)
+
+    # upload function for the model
+    model_path = upload_file(
+        "Upload a model", os.path.join(".","captumcv","model_weights"), accept_multiple_files=False)
+    print(model_path)
+    # upload model loader
+    model_loader_path = upload_file(
+        "Upload a model loader file", os.path.join(".","captumcv","loaders", "tmp"), accept_multiple_files=False)
+    # get all available classes from the model loader file
+    print(model_loader_path)
+    available_classes = []
+    if model_loader_path is not None:
+        available_classes = get_class_names_from_file(model_loader_path)
+    # show class dropdown
+    loader_class_name = st.selectbox('Select wanted class:', available_classes)
+    st.write('You selected:', loader_class_name)
+    col_eval = st.columns(1)[0]
+    if col_eval.button("Evaluate"):
+        evaluate_button_saliency(image_path, model_path, loader_class_name, model_loader_path)
 
 if __name__ == "__main__":
     main()
