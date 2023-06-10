@@ -1,0 +1,13 @@
+# here we want to exclude files that are not relevant to the repository
+**/*.pkl
+**/*.pth
+**/*.zip
+tinker.py
+
+captumcv/model_weights_bck/*
+
+captumcv/image_tmp/*
+!captumcv/image_tmp/.gitkeep
+
+captumcv/loaders/tmp/*
+!captumcv/loaders/tmp/.gitkeep
