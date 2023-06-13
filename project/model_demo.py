@@ -4,7 +4,7 @@ import torch
 import torchvision.transforms as transforms
 from PIL import Image
 
-from captumcv.loaders.DLASimpleLoader import DLASimpleLoader
+from resources.DLASimpleLoader import DLASimpleLoader
 
 if __name__ == "__main__":
     model_path = os.path.join(
@@ -34,7 +34,7 @@ if __name__ == "__main__":
     )
     x_img_test = transform_test(img)
     # reshape to correct shape
-    x_img_test = torch.reshape(x_img_test, model_loader.get_image_shape())
+    x_img_test = torch.reshape(x_img_test, model_loader.get_input_shape())
     # we may need to normalize the image here
     print(x_img_test.shape)
     classes = (
@@ -49,7 +49,6 @@ if __name__ == "__main__":
         "ship",
         "truck",
     )
-
     y = model_loader.predict(x_img_test)
     print(y.size())
     print(y.argmax())
