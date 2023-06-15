@@ -4,6 +4,7 @@ from typing import List
 import torch
 import torch.backends.cudnn as cudnn
 
+
 class ImageModelWrapper:
     """Wrapper base class for image models."""
 
@@ -30,7 +31,6 @@ class ImageModelWrapper:
 
     def __try_loading_model(self, model_path: str):
         # prepare model
-        #self.model = self.model[0]
         self.model = self.model.to(self.device)
         try:
             # todo do some checks if file exists or so
