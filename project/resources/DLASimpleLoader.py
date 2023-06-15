@@ -20,3 +20,7 @@ class DLASimpleLoader(ImageModelWrapper):
         normalization_params = {"mean": (0.4914, 0.4822, 0.4465),
                                 "std": (0.2023, 0.1994, 0.2010)}
         super(DLASimpleLoader, self).__init__(input_shape, target_image_shape, model_path, model, normalization_params)
+
+        #custom preprocess_image method can be defined here
+        def preprocess_image(self, *args, **kwargs):
+            return super().preprocess_image(*args, **kwargs)

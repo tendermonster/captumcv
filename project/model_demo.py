@@ -1,7 +1,7 @@
 import os
 
-import torch
-import torchvision.transforms as transforms
+#import torch
+#import torchvision.transforms as transforms
 from PIL import Image
 
 from resources.DLASimpleLoader import DLASimpleLoader
@@ -23,20 +23,24 @@ if __name__ == "__main__":
     # x_img = np.reshape(x_img, model_loader.get_image_shape())
     # x_img = torch.from_numpy(x_img)
     # normalizes the image
-    transform_test = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Resize((32, 32)),  # in case of cifar10
-            transforms.Normalize(
-                mean=(0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010)
-            ),
-        ]
-    )
-    x_img_test = transform_test(img)
+    #transform_test = transforms.Compose(
+    #    [
+    #        transforms.ToTensor(),
+    #        transforms.Resize((32, 32)),  # in case of cifar10
+    #        transforms.Normalize(
+    #            mean=(0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010)
+    #        ),
+    #    ]
+    #)
+    #x_img_test = transform_test(img)
     # reshape to correct shape
-    x_img_test = torch.reshape(x_img_test, model_loader.get_input_shape())
+    #x_img_test = torch.reshape(x_img_test, model_loader.get_input_shape())
     # we may need to normalize the image here
-    print(x_img_test.shape)
+    #print(x_img_test.shape)
+    
+    # Updated approach uses normalization and other values as parameters 
+    # for internal calculation (see DLASimpleLoader.py)
+    
     classes = (
         "plane",
         "car",
@@ -49,6 +53,7 @@ if __name__ == "__main__":
         "ship",
         "truck",
     )
-    y = model_loader.predict(x_img_test)
+    preprocessed_image = model_loader.preprocess_image(image = img)
+    y = model_loader.predict(preprocessed_image)
     print(y.size())
     print(y.argmax())

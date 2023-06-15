@@ -30,9 +30,11 @@ class ImageModelWrapper(object):
             output = self.model(X.to(self.device))
         return output
 
-    def preprocess_image(self, image: PIL.Image) -> torch.Tensor:
+    def preprocess_image(self, *args, **kwargs):
         """transforms image to the right input size of the model
         needs some adjustment for dynamic variables, for custom transformations"""
+        image = kwargs['image']
+        print(image)
         transform_test = transforms.Compose(
             [
                 transforms.ToTensor(),
