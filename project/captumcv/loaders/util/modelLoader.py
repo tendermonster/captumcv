@@ -30,11 +30,24 @@ class ImageModelWrapper(object):
             output = self.model(X.to(self.device))
         return output
 
-    def preprocess_image(self, *args, **kwargs):
-        """transforms image to the right input size of the model
-        needs some adjustment for dynamic variables, for custom transformations"""
-        image = kwargs['image']
-        print(image)
+    def preprocess_image(self, *args, **kwargs) -> torch.Tensor:
+        """
+        Transforms image to the right input size of the model
+        needs some adjustment for dynamic variables, for custom transformations.
+        This method can be overridden if any custom preprocessing is needed.
+
+        Args:
+            args[0]: Pillow Image or 
+            kwargs["image"]: Pillow Image or
+        Returns:
+            torch.Tensor: _description_
+        """
+        if "image" in kwargs:
+            image = kwargs['image']
+        elif args:
+            image = args[0]
+        else:
+            raise Exception("No image argument provided")
         transform_test = transforms.Compose(
             [
                 transforms.ToTensor(),

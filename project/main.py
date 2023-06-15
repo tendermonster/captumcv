@@ -86,6 +86,7 @@ def model_loaded_button(uploaded_file):
         st.warning("No file uploaded")
 
 
+# TODO remove this methode because it is not needed anymore
 def process_image(image_path: str, image_shape: Tuple):
     """
     This method processes the image and returns the tensor of the correct shape.
@@ -122,7 +123,7 @@ def process_image(image_path: str, image_shape: Tuple):
 
     x_img_inv = inv_normal(x_img_before)
 
-    return x_img, x_img_before, x_img_inv
+    return x_img, np.array(img), x_img_inv
 
 
 # demo this only will work for saliency
@@ -139,17 +140,16 @@ def evaluate_button_saliency(input_image_path: str, model_path: str, loader_clas
     # check that the class extends correct subclass
     if model_loader and issubclass(model_loader, ImageModelWrapper):
         instance: ImageModelWrapper = model_loader(model_path)
-        tmp_model = instance.model
         saliency = Saliency(instance.model)
-        # saliency = IntegratedGradients(instance.model)
-        x_img, x_img_before, x_img_inv = process_image(input_image_path, instance.get_image_shape())
-        attribution = saliency.attribute(x_img, target=0)
-        attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1,2,0))
-        # print(attribution)
-        print(attribution.shape)
-        print(attribution_np.shape) # this does work
+        img = Image.open(input_image_path)
+        img = np.array(img) # convert to numpy array
+        X_img = instance.preprocess_image(img)
+        attribution = saliency.attribute(X_img, target=0)
+        attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), axes=(1,2,0))
+        # the original image should have the (H,W,C) format
+        attribution_np = np.flip(attribution_np, axis=1) # flip the image on y axis # BUG why is it even flipped ??? 
         f, ax = viz.visualize_image_attr_multiple(attribution_np,
-                                      x_img_inv.permute(1, 2, 0).numpy(),
+                                      img,
                                       ["original_image", "heat_map"],
                                       ["all", "positive"],
                                       show_colorbar=True,
@@ -157,7 +157,6 @@ def evaluate_button_saliency(input_image_path: str, model_path: str, loader_clas
                                      )
         
         st.pyplot(f) # very nice this plots the plt figure !
-
         # st.image(attribution_np,caption='origin Bild', width=300)
         # Now you can work with the dynamically loaded class instance
         st.write("Evaluation finished")
@@ -223,7 +222,6 @@ def main():
     # upload an image to test
     image_path = upload_file(
         "Upload an image", os.path.join(".","captumcv","image_tmp"), accept_multiple_files=False)
-
     # upload function for the model
     model_path = upload_file(
         "Upload a model", os.path.join(".","captumcv","model_weights"), accept_multiple_files=False)
