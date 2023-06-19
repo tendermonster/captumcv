@@ -27,16 +27,16 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # Create directories for saving models and images
 # BUG this is unexpected behaviour. os.path.join returning tuple. Steamlit might be involved! Need to report
-# CACHE_DIR = os.path.join(".cache")
-# CACHE_DIR = "".join(CACHE_DIR)
-# PATH_IMAGE_TMP = (os.path.join(".", "captumcv", "image_tmp"),)
-# PATH_IMAGE_TMP = "".join(PATH_IMAGE_TMP)
-# PATH_MODEL_WEIGHTS = (os.path.join(".", "captumcv", "model_weights"),)
-# PATH_MODEL_WEIGHTS = "".join(PATH_MODEL_WEIGHTS)
-# PATH_MODEL_LOADER = (os.path.join(".", "captumcv", "loaders", "tmp"),)
-# PATH_MODEL_LOADER = "".join(PATH_MODEL_LOADER)
+CACHE_DIR = os.path.join(".cache")
+CACHE_DIR = "".join(CACHE_DIR)
+PATH_IMAGE_TMP = (os.path.join(".", "captumcv", "image_tmp"),)
+PATH_IMAGE_TMP = "".join(PATH_IMAGE_TMP)
+PATH_MODEL_WEIGHTS = (os.path.join(".", "captumcv", "model_weights"),)
+PATH_MODEL_WEIGHTS = "".join(PATH_MODEL_WEIGHTS)
+PATH_MODEL_LOADER = (os.path.join(".", "captumcv", "loaders", "tmp"),)
+PATH_MODEL_LOADER = "".join(PATH_MODEL_LOADER)
 
-# os.makedirs(CACHE_DIR, exist_ok=True)
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 choose_method = st.selectbox(
     "Choose Attribution Method",
@@ -233,10 +233,6 @@ def device_selection():
 
 def delete_cache():
     if st.sidebar.button("Delete cache"):
-        CACHE_DIR = os.path.join(".cache")
-        PATH_IMAGE_TMP = os.path.join(".", "captumcv", "image_tmp")
-        PATH_MODEL_WEIGHTS = os.path.join(".", "captumcv", "model_weights")
-        PATH_MODEL_LOADER = os.path.join(".", "captumcv", "loaders", "tmp")
         delete_files_except_gitkeep(CACHE_DIR)
         delete_files_except_gitkeep(PATH_MODEL_LOADER)
         delete_files_except_gitkeep(PATH_IMAGE_TMP)
@@ -277,7 +273,6 @@ def upload_file(
     Args:
         save_path (str): file path to save the uploaded file to.
     """
-    CACHE_DIR = os.path.join(".cache")
     cache_file_path = os.path.join(CACHE_DIR, f"{title}.pkl")
     uploaded_file = st.file_uploader(title, accept_multiple_files=accept_multiple_files)
     if uploaded_file is not None:
@@ -308,12 +303,6 @@ def upload_file(
 
 
 def main():
-    CACHE_DIR = os.path.join(".cache")
-    os.makedirs(CACHE_DIR, exist_ok=True)
-    PATH_IMAGE_TMP = os.path.join(".", "captumcv", "image_tmp")
-    PATH_MODEL_WEIGHTS = os.path.join(".", "captumcv", "model_weights")
-    PATH_MODEL_LOADER = os.path.join(".", "captumcv", "loaders", "tmp")
-
     # Layout of the sidebar
     st.sidebar.title("Captum GUI")
     device_selection()
