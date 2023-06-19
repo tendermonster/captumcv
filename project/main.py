@@ -1,5 +1,8 @@
 import os
+import pickle
+import shutil
 from typing import Optional, Tuple
+
 import numpy as np
 import streamlit as st
 import torch
@@ -13,20 +16,27 @@ from captum.attr import (
 )
 from captum.attr import visualization as viz
 from PIL import Image
-from captum.attr import IntegratedGradients
+
 from captumcv.loaders.util.classLoader import (
     get_class_names_from_file,
     load_class_from_file,
 )
 from captumcv.loaders.util.modelLoader import ImageModelWrapper
-import pickle
-
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # Create directories for saving models and images
-CACHE_DIR = ".cache"
-os.makedirs(CACHE_DIR, exist_ok=True)
+# BUG this is unexpected behaviour. os.path.join returning tuple. Steamlit might be involved! Need to report
+# CACHE_DIR = os.path.join(".cache")
+# CACHE_DIR = "".join(CACHE_DIR)
+# PATH_IMAGE_TMP = (os.path.join(".", "captumcv", "image_tmp"),)
+# PATH_IMAGE_TMP = "".join(PATH_IMAGE_TMP)
+# PATH_MODEL_WEIGHTS = (os.path.join(".", "captumcv", "model_weights"),)
+# PATH_MODEL_WEIGHTS = "".join(PATH_MODEL_WEIGHTS)
+# PATH_MODEL_LOADER = (os.path.join(".", "captumcv", "loaders", "tmp"),)
+# PATH_MODEL_LOADER = "".join(PATH_MODEL_LOADER)
+
+# os.makedirs(CACHE_DIR, exist_ok=True)
 
 choose_method = st.selectbox(
     "Choose Attribution Method",
@@ -143,12 +153,10 @@ def evaluate_button_ig(
         tmp_model = instance.model
         ig = IntegratedGradients(instance.model)
         x_img, x_img_before, x_img_inv = process_image(
-            input_img_path, instance.get_image_shape()
+            input_img_path, instance.get_input_shape()
         )
         attribution = ig.attribute(x_img, target=0)
         attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
-        print(attribution.shape)
-        print(attribution_np.shape)
         f, ax = viz.visualize_image_attr_multiple(
             attribution_np,
             x_img_inv.permute(1, 2, 0).numpy(),
@@ -189,13 +197,10 @@ def evaluate_button_saliency(
         saliency = Saliency(instance.model)
         # saliency = IntegratedGradients(instance.model)
         x_img, x_img_before, x_img_inv = process_image(
-            input_image_path, instance.get_image_shape()
+            input_image_path, instance.get_input_shape()
         )
         attribution = saliency.attribute(x_img, target=0)
         attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
-        # print(attribution)
-        print(attribution.shape)
-        print(attribution_np.shape)  # this does work
         f, ax = viz.visualize_image_attr_multiple(
             attribution_np,
             x_img_inv.permute(1, 2, 0).numpy(),
@@ -226,6 +231,19 @@ def device_selection():
         st.sidebar.write("you choose GPU(CUDA)")
 
 
+def delete_cache():
+    if st.sidebar.button("Delete cache"):
+        CACHE_DIR = os.path.join(".cache")
+        PATH_IMAGE_TMP = os.path.join(".", "captumcv", "image_tmp")
+        PATH_MODEL_WEIGHTS = os.path.join(".", "captumcv", "model_weights")
+        PATH_MODEL_LOADER = os.path.join(".", "captumcv", "loaders", "tmp")
+        delete_files_except_gitkeep(CACHE_DIR)
+        delete_files_except_gitkeep(PATH_MODEL_LOADER)
+        delete_files_except_gitkeep(PATH_IMAGE_TMP)
+        delete_files_except_gitkeep(PATH_MODEL_WEIGHTS)
+        st.sidebar.text("Cache deleted")
+
+
 def instances_selection():
     options = ["All", "Correct", "Incorrect"]
     selected_instances = st.sidebar.selectbox("Instances:", options)
@@ -238,6 +256,18 @@ def instances_selection():
         st.sidebar.write("you choose Incorrect")
 
 
+def delete_files_except_gitkeep(directory):
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file != ".gitkeep":
+                file_path = os.path.join(root, file)
+                os.remove(file_path)
+
+        for dir in dirs:
+            dir_path = os.path.join(root, dir)
+            delete_files_except_gitkeep(dir_path)
+
+
 def upload_file(
     title: str, save_path: str, accept_multiple_files=False
 ) -> Optional[str | None]:
@@ -247,15 +277,18 @@ def upload_file(
     Args:
         save_path (str): file path to save the uploaded file to.
     """
-
-    cache_file_path = os.path.join(CACHE_DIR, f"{title}.pth")
+    CACHE_DIR = os.path.join(".cache")
+    cache_file_path = os.path.join(CACHE_DIR, f"{title}.pkl")
     uploaded_file = st.file_uploader(title, accept_multiple_files=accept_multiple_files)
     if uploaded_file is not None:
+        delete_files_except_gitkeep(save_path)
         full_path = os.path.join(save_path, uploaded_file.name)
         # To read file as bytes:
         bytes_data = uploaded_file.getvalue()
         with open(full_path, "wb") as file:
             file.write(bytes_data)
+            file.close()
+
         st.success("File saved successfully")
         # Save data to cache
         with open(cache_file_path, "wb") as cache_file:
@@ -270,13 +303,21 @@ def upload_file(
         return cached_data
     else:
         st.warning("No file uploaded")
+        delete_files_except_gitkeep(save_path)
         return None
 
 
 def main():
+    CACHE_DIR = os.path.join(".cache")
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    PATH_IMAGE_TMP = os.path.join(".", "captumcv", "image_tmp")
+    PATH_MODEL_WEIGHTS = os.path.join(".", "captumcv", "model_weights")
+    PATH_MODEL_LOADER = os.path.join(".", "captumcv", "loaders", "tmp")
+
     # Layout of the sidebar
     st.sidebar.title("Captum GUI")
     device_selection()
+    delete_cache()
     st.sidebar.subheader("Filter by Instances")
     instances_selection()
     st.sidebar.subheader("Attribution Method Arguments")
@@ -284,24 +325,22 @@ def main():
     # upload an image to test
     image_path = upload_file(
         "Upload an image",
-        os.path.join(".", "captumcv", "image_tmp"),
+        PATH_IMAGE_TMP,
         accept_multiple_files=False,
     )
     # upload function for the model
     model_path = upload_file(
         "Upload a model",
-        os.path.join(".", "captumcv", "model_weights"),
+        PATH_MODEL_WEIGHTS,
         accept_multiple_files=False,
     )
-    print(model_path)
     # upload model loader
     model_loader_path = upload_file(
         "Upload a model loader file",
-        os.path.join(".", "captumcv", "loaders", "tmp"),
+        PATH_MODEL_LOADER,
         accept_multiple_files=False,
     )
     # get all available classes from the model loader file
-    print(model_loader_path)
     available_classes = []
     if model_loader_path is not None:
         available_classes = get_class_names_from_file(model_loader_path)
@@ -314,11 +353,8 @@ def main():
             evaluate_button_saliency(
                 image_path, model_path, loader_class_name, model_loader_path
             )
-    elif choose_method == "Integrated gradients":
-        if col_eval.button("Evaluate"):
-            evaluate_button_ig(
-                image_path, model_path, loader_class_name, model_loader_path
-            )
+    elif choose_method == "Integrated gradients" and col_eval.button("Evaluate"):
+        evaluate_button_ig(image_path, model_path, loader_class_name, model_loader_path)
 
 
 if __name__ == "__main__":
