@@ -319,13 +319,13 @@ def main():
     )
     # upload function for the model
     model_path = upload_file(
-        "Upload a model",
+        "Upload a model(.pth)",
         PATH_MODEL_WEIGHTS,
         accept_multiple_files=False,
     )
     # upload model loader
     model_loader_path = upload_file(
-        "Upload a model loader file",
+        "Upload a model loader file(.py)",
         PATH_MODEL_LOADER,
         accept_multiple_files=False,
     )
