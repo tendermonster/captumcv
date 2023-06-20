@@ -2,17 +2,11 @@ import os
 import pickle
 import shutil
 from typing import Optional, Tuple
-<<<<<<< HEAD
-import joblib
-=======
-
->>>>>>> 2047f696e60fb6340b75e2bc76dcb0a5f0cc1e8e
 import numpy as np
 import streamlit as st
 import torch
 import torchvision.transforms as transforms
 from captum.attr import (
-    GuidedBackprop,
     Deconvolution,
     GradientShap,
     IntegratedGradients,
@@ -28,10 +22,8 @@ from captumcv.loaders.util.classLoader import (
     load_class_from_file,
 )
 from captumcv.loaders.util.modelLoader import ImageModelWrapper
+from captum.attr import NeuronGuidedBackprop
 
-<<<<<<< HEAD
-os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
-=======
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # Create directories for saving models and images
@@ -47,16 +39,15 @@ PATH_MODEL_LOADER = "".join(PATH_MODEL_LOADER)
 
 os.makedirs(CACHE_DIR, exist_ok=True)
 
->>>>>>> 2047f696e60fb6340b75e2bc76dcb0a5f0cc1e8e
 choose_method = st.selectbox(
     "Choose Attribution Method",
     (
-        "Integrated gradients",
-        "Seliency",
-        "TCAV",
-        "GradCam",
-        "Neuron Conductance",
-        "Neuron Guided Backpropagation",
+        "Integrated gradients",  # Manyue
+        "Seliency",  # Artiom
+        "TCAV",  # Babar
+        "GradCam",  # Babar
+        "Neuron Conductance",  # Artiom
+        "Neuron Guided Backpropagation",  # Manyue
         "Deconvolution",
     ),
 )
@@ -99,8 +90,6 @@ def parameter_selection():
         st.sidebar.write("you choose Neuron Conductance")
     if choose_method == "Neuron Guided Backpropagation":
         st.sidebar.text("without parameter")
-    if choose_method == "Deconvolution":
-        st.sidebar.text("without parameter")
 
 
 def process_image(image_path: str, image_shape: Tuple):
@@ -140,8 +129,12 @@ def process_image(image_path: str, image_shape: Tuple):
     x_img_inv = inv_normal(x_img_before)
 
     return x_img, x_img_before, x_img_inv
-#Funktion for Deconvolution
-def evaluation_button_deconvolution(input_img_path:str, model_path:str, loader_class_name:str,model_loader_path):
+
+
+# Funktion for Deconvolution
+def evaluation_button_deconvolution(
+    input_img_path: str, model_path: str, loader_class_name: str, model_loader_path
+):
     """
     This method runs the captum algorithm and shows the results.
 
@@ -151,32 +144,73 @@ def evaluation_button_deconvolution(input_img_path:str, model_path:str, loader_c
         model_loader_path (str): model loader python file path
     """
     model_loader = load_class_from_file(model_loader_path, loader_class_name)
-    if model_loader and issubclass(model_loader,ImageModelWrapper):
+    if model_loader and issubclass(model_loader, ImageModelWrapper):
         instance: ImageModelWrapper = model_loader(model_path)
         tmp_model = instance.model
         deconvolution = Deconvolution(instance.model)
-        x_img, x_img_before, x_img_inv = process_image(input_img_path, instance.get_image_shape())
-        attribution = deconvolution.attribute(x_img, target = 0)
-        attribution_np = np.transpose(attribution.squeeze().cpu().numpy(),(1,2,0))
+        x_img, x_img_before, x_img_inv = process_image(
+            input_img_path, instance.get_image_shape()
+        )
+        attribution = deconvolution.attribute(x_img, target=0)
+        attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
         print(attribution.shape)
         print(attribution_np.shape)
-        f,ax = viz.visualize_image_attr_multiple(attribution_np,
-            x_img_inv.permute(1,2,0).numpy(), 
+        f, ax = viz.visualize_image_attr_multiple(
+            attribution_np,
+            x_img_inv.permute(1, 2, 0).numpy(),
             ["original_image", "heat_map"],
             ["all", "positive"],
-            show_colorbar = True,
-            outlier_perc = 2, 
+            show_colorbar=True,
+            outlier_perc=2,
         )
-        st.pyplot(f) 
+        st.pyplot(f)
         st.write("Evaluation finished")
     else:
-        st.warning(
-            "Failed to load the class from the file. Try loading the file again")
+        st.warning("Failed to load the class from the file. Try loading the file again")
+
+
+# Functin for Neuron BPB
+def evaluate_button_guided_backprop(
+    input_img_path: str, model_path: str, loader_class_name: str, model_loader_path
+):
+    """
+    This method runs the captum algorithm and shows the results.
+
+    Args:
+        model_path (str): Path to the model weights
+        loader_class_name (str): choosen class loader name
+        model_loader_path (str): model loader python file path
+    """
+    model_loader = load_class_from_file(model_loader_path, loader_class_name)
+    if model_loader and issubclass(model_loader, ImageModelWrapper):
+        instance: ImageModelWrapper = model_loader(model_path)
+        tmp_model = instance.model
+        model = tmp_model.module.to("cpu")
+        gbpp = NeuronGuidedBackprop(
+            instance.model,
+            model.linear,
+        )
+        x_img, x_img_before, x_img_inv = process_image(
+            input_img_path, instance.get_input_shape()
+        )
+        attribution = gbpp.attribute(x_img, neuron_selector=1)
+        attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
+        f, ax = viz.visualize_image_attr_multiple(
+            attribution_np,
+            x_img_inv.permute(1, 2, 0).numpy(),
+            ["original_image", "heat_map"],
+            ["all", "positive"],
+            show_colorbar=True,
+            outlier_perc=2,
+        )
+
+        st.pyplot(f)
+        st.write("Evaluation finished")
+    else:
+        st.warning("Failed to load the class from the file. Try loading the file again")
 
 
 # Function for IG
-
-
 def evaluate_button_ig(
     input_img_path: str, model_path: str, loader_class_name: str, model_loader_path
 ):
@@ -379,13 +413,20 @@ def main():
     loader_class_name = st.selectbox("Select wanted class:", available_classes)
     st.write("You selected:", loader_class_name)
     col_eval = st.columns(1)[0]
-    if choose_method == "Seliency":
-        if col_eval.button("Evaluate"):
-            evaluate_button_saliency(
-                image_path, model_path, loader_class_name, model_loader_path
-            )
+    if choose_method == "Seliency" and col_eval.button("Evaluate"):
+        evaluate_button_saliency(
+            image_path, model_path, loader_class_name, model_loader_path
+        )
     elif choose_method == "Integrated gradients" and col_eval.button("Evaluate"):
         evaluate_button_ig(image_path, model_path, loader_class_name, model_loader_path)
+    elif choose_method == "Deconvolution" and col_eval.button("Evaluate"):
+        evaluate_button_ig(image_path, model_path, loader_class_name, model_loader_path)
+    elif choose_method == "Neuron Guided Backpropagation" and col_eval.button(
+        "Evaluate"
+    ):
+        evaluate_button_guided_backprop(
+            image_path, model_path, loader_class_name, model_loader_path
+        )
 
 
 if __name__ == "__main__":
