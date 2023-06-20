@@ -1,10 +1,12 @@
 import ast
 import importlib.util
+import typing
+from typing import Any, List
 
 from captumcv.loaders.util.modelLoader import ImageModelWrapper
 
 
-def load_class_from_file(file_path, class_name):
+def load_class_from_file(file_path: str, class_name: str) -> Any:
     spec = importlib.util.spec_from_file_location(class_name, file_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -12,7 +14,15 @@ def load_class_from_file(file_path, class_name):
     return class_obj
 
 
-def get_class_names_from_file(file_path):
+def load_attribute_from_class(class_obj: Any, attribute_name: str) -> Any:
+    return getattr(class_obj, attribute_name, None)
+
+
+def get_attribute_names_from_class(class_obj: Any) -> List[str]:
+    return dir(class_obj)
+
+
+def get_class_names_from_file(file_path: str) -> List[str]:
     with open(file_path, "r") as file:
         tree = ast.parse(file.read())
     class_names = []

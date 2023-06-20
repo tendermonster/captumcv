@@ -3,7 +3,7 @@ import pickle
 import shutil
 import typing
 from enum import Enum
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import joblib
 import numpy as np
@@ -25,7 +25,9 @@ from captum.concept import TCAV, Concept
 from PIL import Image
 
 from captumcv.loaders.util.classLoader import (
+    get_attribute_names_from_class,
     get_class_names_from_file,
+    load_attribute_from_class,
     load_class_from_file,
 )
 from captumcv.loaders.util.modelLoader import ImageModelWrapper
@@ -156,6 +158,28 @@ def __plot(true_img, attr_img) -> 'matplotlib.figure.Figure':
         outlier_perc=2,
     )
     return f
+
+def __get_model_modules(model: torch.nn.Module) -> Tuple[List[str],List[torch.nn.Module]]:
+    """
+    This method returns all modules of the given model. 
+    Only load the attributes of instance torch.nn.Module.
+
+    Args:
+        model (torch.nn.Module): model to get the modules from
+
+    Returns:
+        Tuple[List[str],List[torch.nn.Module]]: returns a tuple of the module names and the modules
+    """
+    attr = get_attribute_names_from_class(model)
+    nn_modules: List[torch.nn.Module] = [] # contain objects that are of instance torch.nn.Module
+    nn_modules_names: List[str] = []
+    attr_name: str
+    for attr_name in attr:
+        attr_obj = load_attribute_from_class(model, attr_name)
+        if isinstance(attr_obj, torch.nn.Module):
+            nn_modules_names.append(attr_name)
+            nn_modules.append(attr_obj)
+    return (nn_modules_names,nn_modules)
 
 # Function for IG
 def evaluate_button_ig(
