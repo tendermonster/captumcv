@@ -1,4 +1,5 @@
 import os
+import typing
 from enum import Enum
 from typing import Optional, Tuple
 
@@ -10,12 +11,15 @@ import torchvision.transforms as transforms
 from captum.attr import (
     GradientShap,
     IntegratedGradients,
+    LayerGradientXActivation,
+    LayerIntegratedGradients,
     NeuronConductance,
     NoiseTunnel,
     Occlusion,
     Saliency,
 )
 from captum.attr import visualization as viz
+from captum.concept import TCAV, Concept
 from PIL import Image
 from torch.nn.parallel import DistributedDataParallel as DDP
 
@@ -24,6 +28,9 @@ from captumcv.loaders.util.classLoader import (
     load_class_from_file,
 )
 from captumcv.loaders.util.modelLoader import ImageModelWrapper
+
+if typing.TYPE_CHECKING:
+    import matplotlib
 
 
 class Attr(Enum):
@@ -101,76 +108,47 @@ def parameter_selection():
     if choose_method == Attr.DECONVOLUTION.value:
         st.sidebar.text("without parameter")
 
-
-def model_loader_class_button(uploaded_file):
-    global file_cache
-    # hochladen oder angegebene Path
-    path = "project/testbild.jpg"
-    image = Image.open(path)
-    st.image(image, caption="origin Bild")
-
-    if uploaded_file is not None:
-        # model = load_model(uploaded_file)
-        st.write("Image uploaded successfully")
-    else:
-        st.warning("No file uploaded")
-
-
-def model_loaded_button(uploaded_file):
-    # hochladen oder angegebene Path
-    path = "project/testbild.jpg"
-    image = Image.open(path)
-    st.image(image, caption="origin Bild")
-
-    if uploaded_file is not None:
-        st.write("Image uploaded successfully")
-    else:
-        st.warning("No file uploaded")
-
-
-# TODO remove this methode because it is not needed anymore
-def process_image(image_path: str, image_shape: Tuple):
+def __load_model(model_path: str, loader_class_name: str, model_loader_path: str) -> ImageModelWrapper:
     """
-    This method processes the image and returns the tensor of the correct shape.
+    This method loads the model from the given path and returns it.
 
     Args:
-        image_path (str): path to image
-        image_shape (Tuple): nn model input shape
+        model_path (str): Path to the model weights
+        loader_class_name (str): choosen class loader name
+        model_loader_path (str): model loader python file path
 
     Returns:
-        _type_: Tuple[x_img, x_img_before, x_img_inv]
+        model|None: returns the loaded model or None if the model could not be loaded
     """
-    img = Image.open(image_path)
-    transform_test = transforms.Compose(
-        [
-            transforms.ToTensor(),
-            transforms.Resize((32, 32)),  # in case of cifar10
-            transforms.Normalize(
-                mean=(0.4914, 0.4822, 0.4465), std=(0.2023, 0.1994, 0.2010)
-            ),
-        ]
+    model_loader = load_class_from_file(model_loader_path, loader_class_name)
+    # check that the class extends correct subclass
+    if model_loader and issubclass(model_loader, ImageModelWrapper):
+        instance: ImageModelWrapper = model_loader(model_path)
+        if isinstance(instance.model, torch.nn.DataParallel):
+            model = instance.model.module.to('cpu') # if DataParallel do this to make it work on cpu
+        else:
+            model = instance.model
+        return model
+    return None
+
+def __plot(true_img, attr_img) -> matplotlib.figure.Figure:
+    # the original image should have the (H,W,C) format
+    attr_img = np.flip(
+        attr_img, axis=1
+    )  # flip the image on y axis # BUG why is it even flipped ???
+    f, ax = viz.visualize_image_attr_multiple(
+        attr_img,
+        true_img,
+        ["original_image", "heat_map"],
+        ["all", "positive"],
+        show_colorbar=True,
+        outlier_perc=2,
     )
-    x_img_before = transform_test(img)
-    # reshape to correct shape
-    x_img = torch.reshape(x_img_before, image_shape)
-
-    inv_normal = transforms.Compose(
-        [
-            transforms.Normalize(
-                mean=[0.0, 0.0, 0.0], std=[1 / 0.2023, 1 / 0.1994, 1 / 0.2010]
-            ),
-            transforms.Normalize(mean=[-0.4914, -0.4822, -0.4465], std=[1.0, 1.0, 1.0]),
-        ]
-    )
-
-    x_img_inv = inv_normal(x_img_before)
-
-    return x_img, x_img_before, x_img_inv
-
+    return f
 
 # Function for IG
 def evaluate_button_ig(
-    input_img_path: str, model_path: str, loader_class_name: str, model_loader_path
+    input_image_path: str, model_path: str, loader_class_name: str, model_loader_path
 ):
     """
     This method runs the captum algorithm and shows the results.
@@ -180,33 +158,19 @@ def evaluate_button_ig(
         loader_class_name (str): choosen class loader name
         model_loader_path (str): model loader python file path
     """
-
-    model_loader = load_class_from_file(model_loader_path, loader_class_name)
-    if model_loader and issubclass(model_loader, ImageModelWrapper):
-        instance: ImageModelWrapper = model_loader(model_path)
-        tmp_model = instance.model
-        ig = IntegratedGradients(instance.model)
-        x_img, x_img_before, x_img_inv = process_image(
-            input_img_path, instance.get_image_shape()
-        )
-        attribution = ig.attribute(x_img, target=0)
-        attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
-        print(attribution.shape)
-        print(attribution_np.shape)
-        f, ax = viz.visualize_image_attr_multiple(
-            attribution_np,
-            x_img_inv.permute(1, 2, 0).numpy(),
-            ["original_image", "heat_map"],
-            ["all", "positive"],
-            show_colorbar=True,
-            outlier_perc=2,
-        )
-
-        st.pyplot(f)
-        st.write("Evaluation finished")
-    else:
+    m = __load_model(model_path, loader_class_name, model_loader_path)
+    if m is None:
         st.warning("Failed to load the class from the file. Try loading the file again")
-
+        return
+    ig = IntegratedGradients(m.model)
+    img = Image.open(input_image_path)
+    img = np.array(img)  # convert to numpy array
+    X_img = m.preprocess_image(img)
+    attribution = ig.attribute(X_img, target=0)
+    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
+    f = __plot(img, attribution_np)
+    st.pyplot(f)
+    st.write("Evaluation finished")
 
 def evaluate_button_n_conductance(
     input_image_path: str,
@@ -223,46 +187,21 @@ def evaluate_button_n_conductance(
         loader_class_name (str): choosen class loader name
         model_loader_path (str): model loader python file path
     """
-    model_loader = load_class_from_file(model_loader_path, loader_class_name)
-    # check that the class extends correct subclass
-    if model_loader and issubclass(model_loader, ImageModelWrapper):
-        instance: ImageModelWrapper = model_loader(model_path)
-        # model = DDP(instance.model, device_ids=[0]) # if habe gpu
-
-        model = instance.model.module.to('cpu') # if DataParallel do this to make it work on cpu
-        print(type(model))
-        print(type(model.layer2))
-        import torch.nn as nn
-        ncond = NeuronConductance(model, model.linear)
-        # print(instance.model.module.layer1)
-        img = Image.open(input_image_path)
-        img = np.array(img)  # convert to numpy array
-        X_img = instance.preprocess_image(img)
-        # X_img = torch.Tensor(X_img, requires_grad=True)
-        # X_test = torch.randn(1, 3, 32, 32, requires_grad=True)
-        attribution = ncond.attribute(X_img, neuron_selector=1, target=1)
-        attribution_np = np.transpose(
-            attribution.squeeze().cpu().numpy(), axes=(1, 2, 0)
-        )
-        print("im here?")
-        # the original image should have the (H,W,C) format
-        attribution_np = np.flip(
-            attribution_np, axis=1
-        )  # flip the image on y axis # BUG why is it even flipped ???
-        f, ax = viz.visualize_image_attr_multiple(
-            attribution_np,
-            img,
-            ["original_image", "heat_map"],
-            ["all", "positive"],
-            show_colorbar=True,
-            outlier_perc=2,
-        )
-
-        st.pyplot(f)  # very nice this plots the plt figure !
-        st.write("Evaluation finished")
-    else:
+    m = __load_model(model_path, loader_class_name, model_loader_path)
+    if m is None:
         st.warning("Failed to load the class from the file. Try loading the file again")
-
+        return
+    img = Image.open(input_image_path)
+    img = np.array(img)  # convert to numpy array
+    X_img = m.preprocess_image(img)
+    ncond = NeuronConductance(m, m.linear)
+    attribution = ncond.attribute(X_img, neuron_selector=1, target=1)
+    attribution_np = np.transpose(
+        attribution.squeeze().cpu().numpy(), axes=(1, 2, 0)
+    )
+    f = __plot(attribution_np)
+    st.pyplot(f)  # very nice this plots the plt figure !
+    st.write("Evaluation finished")        
 
 # demo this only will work for saliency
 def evaluate_button_saliency(
@@ -279,36 +218,22 @@ def evaluate_button_saliency(
         loader_class_name (str): choosen class loader name
         model_loader_path (str): model loader python file path
     """
-    model_loader = load_class_from_file(model_loader_path, loader_class_name)
-    # check that the class extends correct subclass
-    if model_loader and issubclass(model_loader, ImageModelWrapper):
-        instance: ImageModelWrapper = model_loader(model_path)
-        saliency = Saliency(instance.model)
-        img = Image.open(input_image_path)
-        img = np.array(img)  # convert to numpy array
-        X_img = instance.preprocess_image(img)
-        attribution = saliency.attribute(X_img, target=0)
-        attribution_np = np.transpose(
-            attribution.squeeze().cpu().numpy(), axes=(1, 2, 0)
-        )
-        # the original image should have the (H,W,C) format
-        attribution_np = np.flip(
-            attribution_np, axis=1
-        )  # flip the image on y axis # BUG why is it even flipped ???
-        f, ax = viz.visualize_image_attr_multiple(
-            attribution_np,
-            img,
-            ["original_image", "heat_map"],
-            ["all", "positive"],
-            show_colorbar=True,
-            outlier_perc=2,
-        )
-
-        st.pyplot(f)  # very nice this plots the plt figure !
-        st.write("Evaluation finished")
-    else:
+    m = __load_model(model_path, loader_class_name, model_loader_path)
+    if m is None:
         st.warning("Failed to load the class from the file. Try loading the file again")
-
+        return
+    saliency = Saliency(m.model)
+    img = Image.open(input_image_path)
+    img = np.array(img)  # convert to numpy array
+    X_img = m.preprocess_image(img)
+    attribution = saliency.attribute(X_img, target=0)
+    attribution_np = np.transpose(
+        attribution.squeeze().cpu().numpy(), axes=(1, 2, 0)
+    )
+    # the original image should have the (H,W,C) format
+    f = __plot(attribution_np)
+    st.pyplot(f)  # very nice this plots the plt figure !
+    st.write("Evaluation finished")
 
 def device_selection():
     # TODO
