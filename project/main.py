@@ -170,38 +170,7 @@ def evaluate_button_ig(
     attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
     f = __plot(img, attribution_np)
     st.pyplot(f)
-    st.write("Evaluation finished")
-
-def evaluate_button_n_conductance(
-    input_image_path: str,
-    model_path: str,
-    loader_class_name: str,
-    model_loader_path: str,
-):
-    """
-    This method runs the captum algorithm and shows the results.
-    Use with DataParallel https://captum.ai/tutorials/Distributed_Attribution 
-
-    Args:
-        model_path (str): Path to the model weights
-        loader_class_name (str): choosen class loader name
-        model_loader_path (str): model loader python file path
-    """
-    m = __load_model(model_path, loader_class_name, model_loader_path)
-    if m is None:
-        st.warning("Failed to load the class from the file. Try loading the file again")
-        return
-    img = Image.open(input_image_path)
-    img = np.array(img)  # convert to numpy array
-    X_img = m.preprocess_image(img)
-    ncond = NeuronConductance(m, m.linear)
-    attribution = ncond.attribute(X_img, neuron_selector=1, target=1)
-    attribution_np = np.transpose(
-        attribution.squeeze().cpu().numpy(), axes=(1, 2, 0)
-    )
-    f = __plot(attribution_np)
-    st.pyplot(f)  # very nice this plots the plt figure !
-    st.write("Evaluation finished")        
+    st.write("Evaluation finished") 
 
 # demo this only will work for saliency
 def evaluate_button_saliency(
@@ -337,7 +306,7 @@ def main():
                     image_path, model_path, loader_class_name, model_loader_path
                 )
             case Attr.NEURON_CONDUCTANCE.value:
-                evaluate_button_n_conductance(image_path, model_path, loader_class_name, model_loader_path)
+                pass
             case Attr.NEURON_GUIDED_BACKPROPAGATION.value:
                 pass
             case Attr.DECONVOLUTION.value:
