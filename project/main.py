@@ -1,4 +1,6 @@
 import os
+import pickle
+import shutil
 import typing
 from enum import Enum
 from typing import Optional, Tuple
@@ -21,7 +23,6 @@ from captum.attr import (
 from captum.attr import visualization as viz
 from captum.concept import TCAV, Concept
 from PIL import Image
-from torch.nn.parallel import DistributedDataParallel as DDP
 
 from captumcv.loaders.util.classLoader import (
     get_class_names_from_file,
@@ -36,18 +37,32 @@ if typing.TYPE_CHECKING:
 class Attr(Enum):
     IG = "Integrated gradients"
     SALIENCY = "Saliency"
-    TCAV = "TCAV"
+    TCAV_ALG = "TCAV"
     GRADCAM = "GradCam"
     NEURON_CONDUCTANCE = "Neuron Conductance"
     NEURON_GUIDED_BACKPROPAGATION = "Neuron Guided Backpropagation"
     DECONVOLUTION = "Deconvolution"
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+# Create directories for saving models and images
+# BUG this is unexpected behaviour. os.path.join returning tuple. Steamlit might be involved! Need to report
+CACHE_DIR = os.path.join(".cache")
+CACHE_DIR = "".join(CACHE_DIR)
+PATH_IMAGE_TMP = (os.path.join(".", "captumcv", "image_tmp"),)
+PATH_IMAGE_TMP = "".join(PATH_IMAGE_TMP)
+PATH_MODEL_WEIGHTS = (os.path.join(".", "captumcv", "model_weights"),)
+PATH_MODEL_WEIGHTS = "".join(PATH_MODEL_WEIGHTS)
+PATH_MODEL_LOADER = (os.path.join(".", "captumcv", "loaders", "tmp"),)
+PATH_MODEL_LOADER = "".join(PATH_MODEL_LOADER)
+
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 choose_method = st.selectbox(
     "Choose Attribution Method",
     (
         Attr.IG.value,
         Attr.SALIENCY.value,
-        Attr.TCAV.value,
+        Attr.TCAV_ALG.value,
         Attr.GRADCAM.value,
         Attr.NEURON_CONDUCTANCE.value,
         Attr.NEURON_GUIDED_BACKPROPAGATION.value,
@@ -55,11 +70,7 @@ choose_method = st.selectbox(
     ),
 )
 st.write("You selected:", choose_method)
-
-
 file_cache = {}
-
-
 ## Modell  und Parameter auswählen
 def parameter_selection():
     if choose_method == Attr.IG.value:
@@ -85,7 +96,7 @@ def parameter_selection():
         st.sidebar.number_input("Insert step:", min_value=25, step=1)
     if choose_method == Attr.SALIENCY.value:
         st.sidebar.text("without parameter")
-    if choose_method == Attr.TCAV.value:
+    if choose_method == Attr.TCAV_ALG.value:
         # need parameter from TCAV
         st.sidebar.write("you choose TCAV")
     if choose_method == Attr.GRADCAM.value:
@@ -131,7 +142,7 @@ def __load_model(model_path: str, loader_class_name: str, model_loader_path: str
         return model
     return None
 
-def __plot(true_img, attr_img) -> matplotlib.figure.Figure:
+def __plot(true_img, attr_img) -> 'matplotlib.figure.Figure':
     # the original image should have the (H,W,C) format
     attr_img = np.flip(
         attr_img, axis=1
@@ -216,6 +227,15 @@ def device_selection():
         st.sidebar.write("you choose GPU(CUDA)")
 
 
+def delete_cache():
+    if st.sidebar.button("Delete cache"):
+        delete_files_except_gitkeep(CACHE_DIR)
+        delete_files_except_gitkeep(PATH_MODEL_LOADER)
+        delete_files_except_gitkeep(PATH_IMAGE_TMP)
+        delete_files_except_gitkeep(PATH_MODEL_WEIGHTS)
+        st.sidebar.text("Cache deleted")
+
+
 def instances_selection():
     options = ["All", "Correct", "Incorrect"]
     selected_instances = st.sidebar.selectbox("Instances:", options)
@@ -228,6 +248,18 @@ def instances_selection():
         st.sidebar.write("you choose Incorrect")
 
 
+def delete_files_except_gitkeep(directory):
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file != ".gitkeep":
+                file_path = os.path.join(root, file)
+                os.remove(file_path)
+
+        for dir in dirs:
+            dir_path = os.path.join(root, dir)
+            delete_files_except_gitkeep(dir_path)
+
+
 def upload_file(
     title: str, save_path: str, accept_multiple_files=False
 ) -> Optional[str | None]:
@@ -237,24 +269,32 @@ def upload_file(
     Args:
         save_path (str): file path to save the uploaded file to.
     """
-    global file_cache
+    cache_file_path = os.path.join(CACHE_DIR, f"{title}.pkl")
     uploaded_file = st.file_uploader(title, accept_multiple_files=accept_multiple_files)
     if uploaded_file is not None:
-        if save_path in file_cache:
-            st.success("File loaded from cache")
-            return file_cache[save_path]
-        else:
-            full_path = os.path.join(save_path, uploaded_file.name)
-            # To read file as bytes:
-            bytes_data = uploaded_file.getvalue()
-            with open(full_path, "wb") as file:
-                file.write(bytes_data)
-            st.success("File saved successfully")
+        delete_files_except_gitkeep(save_path)
+        full_path = os.path.join(save_path, uploaded_file.name)
+        # To read file as bytes:
+        bytes_data = uploaded_file.getvalue()
+        with open(full_path, "wb") as file:
+            file.write(bytes_data)
+            file.close()
 
-            file_cache[save_path] = full_path
-            return full_path
+        st.success("File saved successfully")
+        # Save data to cache
+        with open(cache_file_path, "wb") as cache_file:
+            pickle.dump(full_path, cache_file)
+        st.info("Saved to cache.")
+        return full_path
+    elif os.path.exists(cache_file_path):
+        # Load data from cache
+        with open(cache_file_path, "rb") as cache_file:
+            cached_data = pickle.load(cache_file)
+        st.info("Loaded from cache.")
+        return cached_data
     else:
         st.warning("No file uploaded")
+        delete_files_except_gitkeep(save_path)
         return None
 
 
@@ -262,6 +302,7 @@ def main():
     # Layout of the sidebar
     st.sidebar.title("Captum GUI")
     device_selection()
+    delete_cache()
     st.sidebar.subheader("Filter by Instances")
     instances_selection()
     st.sidebar.subheader("Attribution Method Arguments")
@@ -269,24 +310,22 @@ def main():
     # upload an image to test
     image_path = upload_file(
         "Upload an image",
-        os.path.join(".", "captumcv", "image_tmp"),
+        PATH_IMAGE_TMP,
         accept_multiple_files=False,
     )
     # upload function for the model
     model_path = upload_file(
-        "Upload a model",
-        os.path.join(".", "captumcv", "model_weights"),
+        "Upload a model(.pth)",
+        PATH_MODEL_WEIGHTS,
         accept_multiple_files=False,
     )
-    print(model_path)
     # upload model loader
     model_loader_path = upload_file(
-        "Upload a model loader file",
-        os.path.join(".", "captumcv", "loaders", "tmp"),
+        "Upload a model loader file(.py)",
+        PATH_MODEL_LOADER,
         accept_multiple_files=False,
     )
     # get all available classes from the model loader file
-    print(model_loader_path)
     available_classes = []
     if model_loader_path is not None:
         available_classes = get_class_names_from_file(model_loader_path)
@@ -311,7 +350,7 @@ def main():
                 pass
             case Attr.DECONVOLUTION.value:
                 pass
-            case Attr.TCAV.value:
+            case Attr.TCAV_ALG.value:
                 pass
             case Attr.GRADCAM.value:
                 pass
