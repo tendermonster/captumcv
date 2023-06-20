@@ -53,11 +53,11 @@ choose_method = st.selectbox(
     (
         Attr.IG.value,
         Attr.SALIENCY.value,
-        Attr.TCAV_ALG.value,
-        Attr.GRADCAM.value,
+        #Attr.TCAV_ALG.value,
+        #Attr.GRADCAM.value,
         Attr.NEURON_CONDUCTANCE.value,
-        Attr.NEURON_GUIDED_BACKPROPAGATION.value,
-        Attr.DECONVOLUTION.value,
+        #Attr.NEURON_GUIDED_BACKPROPAGATION.value,
+        #Attr.DECONVOLUTION.value,
     ),
 )
 st.write("You selected:", choose_method)
@@ -312,15 +312,16 @@ def evaluate_button_neuron_conductance(
     st.write("Evaluation finished")     
 
 def device_selection():
-    # TODO
     options = ["CPU", "GPU(CUDA)"]
     selected_devices = st.sidebar.radio("choose a device:", options)
     if selected_devices == "CPU":
         # "Hier sollen über CPU implementiert werden"
         st.sidebar.write("you choose CPU")
+        return "cpu"
     elif selected_devices == "GPU(CUDA)":
         # "Hier sollen über GPU implementiert werden"
         st.sidebar.write("you choose GPU(CUDA)")
+        return "cuda"
 
 
 def delete_cache():
@@ -398,10 +399,11 @@ def upload_file(
 def main():
     # Layout of the sidebar
     st.sidebar.title("Captum GUI")
-    device_selection()
+    # device = device_selection()  # TODO this still need to be done
     delete_cache()
-    st.sidebar.subheader("Filter by Instances")
-    instances_selection()
+    # TODO what does this instances thing means ?? seems uneeded
+    # st.sidebar.subheader("Filter by Instances")
+    # instances_selection()
     st.sidebar.subheader("Attribution Method Arguments")
     parameter_selection()
     # upload an image to test
