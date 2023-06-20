@@ -24,6 +24,13 @@ class ImageModelWrapper(object):
             # else:
             # raise Exception("Model path does not exist")
         # shape of the input image in this model
+    
+    def change_device(self, device: str):
+        # TODO add all check so that model changes device successfully
+        if self.device == device:
+            return
+        self.device = device
+        self.model.to(device)
 
     def predict(self, X: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
