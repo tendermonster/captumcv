@@ -74,28 +74,30 @@ neuron_index = None
 target_index = None
 def parameter_selection():
     if choose_method == Attr.IG.value:
+        selected_step = st.sidebar.number_input("Insert step:", min_value=50, step=5)
         options = [
-            "Gausslegendre",
-            "Riemann_left",
-            "Riemann_right",
-            "Riemann_middle",
-            "Riemann_trapezoid",
+            "gausslegendre",
+            "riemann_left",
+            "riemann_right",
+            "riemann_middle",
+            "riemann_trapezoid",
         ]
-        st.sidebar.selectbox("method:", options)
-        if options == "Gausslegendre":
+        selected_option = st.sidebar.selectbox("Method:", options)
+        if selected_option == "gausslegendre":
             st.write("aaa")
-            st.sidebar.write("you choose Gausslegendre as parameter")
-        elif options == "Riemann_left":
-            st.sidebar.write("you choose Riemann_left as parameter")
-        elif options == "Riemann_right":
-            st.sidebar.write("you choose Riemann_right as parameter")
-        elif options == "Riemann_middle":
-            st.sidebar.write("you choose Riemann_middle as parameter")
-        elif options == "Riemann_trapezoid":
-            st.sidebar.write("you choose Riemann_trapezoid as parameter")
-        st.sidebar.number_input("Insert step:", min_value=25, step=1)
+            st.sidebar.write("You chose Gausslegendre as the parameter")
+        elif selected_option == "riemann_left":
+            st.sidebar.write("You chose Riemann_left as the parameter")
+        elif selected_option == "riemann_right":
+            st.sidebar.write("You chose Riemann_right as the parameter")
+        elif selected_option == "riemann_middle":
+            st.sidebar.write("You chose Riemann_middle as the parameter")
+        elif selected_option == "riemann_trapezoid":
+            st.sidebar.write("You chose Riemann_trapezoid as the parameter")
+        return selected_option,selected_step
+
     if choose_method == Attr.SALIENCY.value:
-        st.sidebar.text("without parameter")
+        pass
     if choose_method == Attr.TCAV_ALG.value:
         # need parameter from TCAV
         st.sidebar.write("you choose TCAV")
@@ -105,9 +107,10 @@ def parameter_selection():
     if choose_method == Attr.NEURON_CONDUCTANCE.value:
         pass
     if choose_method == Attr.NEURON_GUIDED_BACKPROPAGATION.value:
-        st.sidebar.text("without parameter")
+        pass
     if choose_method == Attr.DECONVOLUTION.value:
-        st.sidebar.text("without parameter")
+        pass
+    return None,None
 
 def __load_model(model_path: str, loader_class_name: str, model_loader_path: str) -> Tuple[torch.nn.Module,ImageModelWrapper]:
     """
@@ -245,7 +248,7 @@ def evaluate_button_guided_backprop(
 
 # Function for IG
 def evaluate_button_ig(
-    input_image_path: str, model_path: str, loader_class_name: str, model_loader_path
+    input_image_path: str, model_path: str, loader_class_name: str, model_loader_path, selected_method:str,selected_step,
 ):
     """
     This method runs the captum algorithm and shows the results.
@@ -263,7 +266,8 @@ def evaluate_button_ig(
     img = Image.open(input_image_path)
     img = np.array(img)  # convert to numpy array
     X_img = model_loader.preprocess_image(image=img)
-    attribution = ig.attribute(X_img, target=0)
+    #method_ig = parameter_selection()
+    attribution = ig.attribute(X_img, target=0, method=selected_method,n_steps=selected_step)
     attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
     f = __plot(img, attribution_np)
     st.pyplot(f)
@@ -480,7 +484,7 @@ def main():
     # st.sidebar.subheader("Filter by Instances")
     # instances_selection()
     st.sidebar.subheader("Attribution Method Arguments")
-    parameter_selection()
+    selected_method, selected_step= parameter_selection()
     # upload an image to test
     image_path = upload_file(
         "Upload an image",
@@ -536,7 +540,7 @@ def main():
                 )
             case Attr.IG.value:
                 evaluate_button_ig(
-                    image_path, model_path, loader_class_name, model_loader_path
+                    image_path, model_path, loader_class_name, model_loader_path,selected_method,selected_step
                 )
             case Attr.NEURON_CONDUCTANCE.value:
                 evaluate_button_neuron_conductance(image_path, model_path, loader_class_name, model_loader_path, choosen_layer, neuron_index, target_index)
