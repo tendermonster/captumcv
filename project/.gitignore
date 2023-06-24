@@ -15,4 +15,4 @@ captumcv/loaders/tmp/*
 
 captumcv/models/*
 !captumcv/models/.gitkeep
-!captumcv/models/.readme.txt
+!captumcv/models/readme.txt
