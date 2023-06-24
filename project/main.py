@@ -58,8 +58,8 @@ choose_method = st.selectbox(
         #Attr.TCAV_ALG.value,
         #Attr.GRADCAM.value,
         Attr.NEURON_CONDUCTANCE.value,
-        #Attr.NEURON_GUIDED_BACKPROPAGATION.value,
-        #Attr.DECONVOLUTION.value,
+        Attr.NEURON_GUIDED_BACKPROPAGATION.value,
+        Attr.DECONVOLUTION.value,
     ),
 )
 st.write("You selected:", choose_method)
@@ -210,7 +210,7 @@ def evaluation_button_deconvolution(
 
 # Functin for Neuron BPB
 def evaluate_button_guided_backprop(
-    input_img_path: str, model_path: str, loader_class_name: str, model_loader_path
+    input_image_path: str, model_path: str, loader_class_name: str, model_loader_path
 ):
     """
     This method runs the captum algorithm and shows the results.
@@ -220,34 +220,28 @@ def evaluate_button_guided_backprop(
         loader_class_name (str): choosen class loader name
         model_loader_path (str): model loader python file path
     """
-    model_loader = load_class_from_file(model_loader_path, loader_class_name)
-    if model_loader and issubclass(model_loader, ImageModelWrapper):
-        instance: ImageModelWrapper = model_loader(model_path)
-        tmp_model = instance.model
-        model = tmp_model.module.to("cpu")
-        gbpp = NeuronGuidedBackprop(
-            instance.model,
-            model.linear,
-        )
-        x_img, x_img_before, x_img_inv = process_image(
-            input_img_path, instance.get_input_shape()
-        )
-        attribution = gbpp.attribute(x_img, neuron_selector=1)
-        attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
-        f, ax = viz.visualize_image_attr_multiple(
-            attribution_np,
-            x_img_inv.permute(1, 2, 0).numpy(),
-            ["original_image", "heat_map"],
-            ["all", "positive"],
-            show_colorbar=True,
-            outlier_perc=2,
-        )
-
-        st.pyplot(f)
-        st.write("Evaluation finished")
-    else:
+    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
+    
+    #layer = load_attribute_from_class(model)
+    if model is None:
         st.warning("Failed to load the class from the file. Try loading the file again")
-
+        return
+    img = Image.open(input_image_path)
+    img = np.array(img)
+    X_img = model_loader.preprocess_image(image=img)
+    
+    gbpp = NeuronGuidedBackprop(
+        model,
+        model.linear,
+    )
+    #neuron_index_cast = __try_convert_stt_to_int_or_tuple(neuron_index)
+    #if neuron_index_cast is None:
+        #st.warning("Failed to convert neuron index to int or tuple of ints")
+    attribution = gbpp.attribute(X_img, neuron_selector=1)
+    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
+    f = __plot(img, attribution_np)
+    st.pyplot(f)
+    st.write("Evaluation finished")
 
 # Function for IG
 def evaluate_button_ig(
@@ -547,9 +541,14 @@ def main():
             case Attr.NEURON_CONDUCTANCE.value:
                 evaluate_button_neuron_conductance(image_path, model_path, loader_class_name, model_loader_path, choosen_layer, neuron_index, target_index)
             case Attr.NEURON_GUIDED_BACKPROPAGATION.value:
-                pass
+                evaluate_button_guided_backprop(
+            image_path, model_path, loader_class_name, model_loader_path
+        )
+
             case Attr.DECONVOLUTION.value:
-                pass
+                    evaluation_button_deconvolution(
+            image_path, model_path, loader_class_name, model_loader_path
+        )
             case Attr.TCAV_ALG.value:
                 pass
             case Attr.GRADCAM.value:
