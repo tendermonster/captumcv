@@ -2,6 +2,7 @@ import os
 from typing import Optional, Tuple
 
 import joblib
+from pathlib import Path
 import numpy as np
 import streamlit as st
 import torch
@@ -66,8 +67,41 @@ def parameter_selection():
     if choose_method == "Seliency":
         st.sidebar.text("without parameter")
     if choose_method == "TCAV":
+
         # need parameter from TCAV
         st.sidebar.write("you choose TCAV")
+
+#########################################
+        # Allow users to specify the number of folders
+        num_folders = st.sidebar.number_input("Number of Concepts", min_value=1, value=1, step=1)
+
+        # Create empty lists to store the folder paths
+        concept_folders = []
+        random_folders = []
+
+        # Allow users to input concept and random folder paths
+        for i in range(num_folders):
+            st.sidebar.write(f"### Concept {i+1}")
+            concept_path = st.sidebar.text_input(f"Concept Folder {i+1}")
+            if concept_path:
+                concept_folders.append(concept_path)
+
+            random_path = st.sidebar.text_input(f"Random Folder {i+1}")
+            if random_path:
+                random_folders.append(random_path)
+
+        # Display the uploaded folders on the sidebar
+        st.sidebar.write("### Uploaded Folders")
+        for i in range(num_folders):
+            st.sidebar.write(f"**Folder {i+1}**")
+            if concept_folders and len(concept_folders) > i:
+                st.sidebar.write(f"**Concept Folder**: {concept_folders[i]}")
+            if random_folders and len(random_folders) > i:
+                st.sidebar.write(f"**Random Folder**: {random_folders[i]}")
+
+
+######################################
+        
     if choose_method == "GradCam":
         # need parameter from GradCam
         st.sidebar.write("you choose GradCam")
