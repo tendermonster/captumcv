@@ -34,7 +34,7 @@ model_loader = DLASimpleLoader(model_path)
 
 
 def get_tensor_from_filename(filename):
-    img = Image.open(filename).convert("RGB")
+    img = Image.open(filename)
     return model_loader.preprocess_image(img)
 
 
@@ -51,7 +51,7 @@ def load_image_tensors(class_name, root_path='resources/concepts/', transform=Tr
 
     tensors = []
     for filename in filenames:
-        img = Image.open(filename).convert('RGB')
+        img = Image.open(filename)
         tensors.append(model_loader.preprocess_image(img) if transform else img)
 
     return tensors
@@ -59,20 +59,20 @@ def load_image_tensors(class_name, root_path='resources/concepts/', transform=Tr
 # Load sample images from folder
 tiger_tensors = load_image_tensors('tiger', transform=True) #default False
 #tiger_tensors = torch.stack([model_loader.preprocess_image(img) for img in tiger_imgs])
-
+print(tiger_tensors.size())
 
 concepts_path = "resources/concepts/"
 
-stripes_concept = assemble_concept("honeycombed", 0, concepts_path=concepts_path)
-zigzagged_concept = assemble_concept("striped", 1, concepts_path=concepts_path)
+honeycombed_concept = assemble_concept("honeycombed", 0, concepts_path=concepts_path)
+striped_concept = assemble_concept("striped", 1, concepts_path=concepts_path)
 random_1_concept = assemble_concept("random_1", 2, concepts_path=concepts_path)
 random_2_concept = assemble_concept("random_2", 3, concepts_path=concepts_path)
 
 layers=['layer3', 'layer4']
 
-mytcav = TCAV(model=model_loader, layers=layers, layer_attr_method=LayerIntegratedGradients(model_loader, None, multiply_by_inputs=False))
+mytcav = TCAV(model=model_loader.model, layers=layers, layer_attr_method=LayerIntegratedGradients(model_loader.model, None, multiply_by_inputs=False))
 
-experimental_set_rand = [[stripes_concept, random_1_concept], [zigzagged_concept, random_2_concept]]
+experimental_set_rand = [[honeycombed_concept, random_1_concept], [striped_concept, random_2_concept]]
 
 # tiger class index
 tiger_ind = 1
@@ -83,7 +83,7 @@ tcav_scores_w_random = mytcav.interpret(inputs=tiger_tensors,
                                     target=tiger_ind,
                                     n_steps=5,
                                     )
-tcav_scores_w_random
+print(tcav_scores_w_random)
 
 def evaluate_button_TCAV(concepts, model, layers):
     pass
