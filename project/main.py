@@ -68,10 +68,6 @@ def parameter_selection():
         st.sidebar.text("without parameter")
     if choose_method == "TCAV":
 
-        # need parameter from TCAV
-        st.sidebar.write("you choose TCAV")
-
-#########################################
         # Allow users to specify the number of folders
         num_folders = st.sidebar.number_input("Number of Concepts", min_value=1, value=1, step=1)
 
@@ -98,9 +94,6 @@ def parameter_selection():
                 st.sidebar.write(f"**Concept Folder**: {concept_folders[i]}")
             if random_folders and len(random_folders) > i:
                 st.sidebar.write(f"**Random Folder**: {random_folders[i]}")
-
-
-######################################
         
     if choose_method == "GradCam":
         # need parameter from GradCam
