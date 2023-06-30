@@ -174,41 +174,32 @@ def __get_model_modules(model: torch.nn.Module) -> Dict[str,torch.nn.Module]:
     return res_dict
 
 # Funktion for Deconvolution
-def evaluation_button_deconvolution(
-    input_img_path: str, model_path: str, loader_class_name: str, model_loader_path
-):
+def evaluation_button_deconvolution(input_image_path: str,
+    model_path: str,    loader_class_name: str,    model_loader_path: str,):
     """
     This method runs the captum algorithm and shows the results.
 
     Args:
         model_path (str): Path to the model weights
-        loader_class_name (str): chosen class loader name
+        loader_class_name (str): choosen class loader name
         model_loader_path (str): model loader python file path
     """
-    model_loader = load_class_from_file(model_loader_path, loader_class_name)
-    if model_loader and issubclass(model_loader, ImageModelWrapper):
-        instance: ImageModelWrapper = model_loader(model_path)
-        tmp_model = instance.model
-        deconvolution = Deconvolution(instance.model)
-        x_img, x_img_before, x_img_inv = process_image(
-            input_img_path, instance.get_image_shape()
-        )
-        attribution = deconvolution.attribute(x_img, target=0)
-        attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
-        print(attribution.shape)
-        print(attribution_np.shape)
-        f, ax = viz.visualize_image_attr_multiple(
-            attribution_np,
-            x_img_inv.permute(1, 2, 0).numpy(),
-            ["original_image", "heat_map"],
-            ["all", "positive"],
-            show_colorbar=True,
-            outlier_perc=2,
-        )
-        st.pyplot(f)
-        st.write("Evaluation finished")
-    else:
+    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
+    if model is None:
         st.warning("Failed to load the class from the file. Try loading the file again")
+        return
+    deconvolution = Deconvolution(model)
+    img = Image.open(input_image_path)
+    img = np.array(img)  # convert to numpy array
+    X_img = model_loader.preprocess_image(image=img)
+    attribution = deconvolution.attribute(X_img, target=0)
+    attribution_np = np.transpose(
+        attribution.squeeze().cpu().numpy(), axes=(1, 2, 0)
+    )
+    # the original image should have the (H,W,C) format
+    f = __plot(img, attribution_np)
+    st.pyplot(f)  # very nice this plots the plt figure !
+    st.write("Evaluation finished")
 
 
 # Functin for Neuron BPB
