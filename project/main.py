@@ -6,21 +6,14 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import streamlit as st
 import torch
-from captum.attr import (
-    IntegratedGradients,
-    NeuronConductance,
-    Saliency,
-)
+from captum.attr import IntegratedGradients, NeuronConductance, Saliency
 from captum.attr import visualization as viz
-from PIL import Image
-
-from captumcv.loaders.util.classLoader import (
-    get_attribute_names_from_class,
-    get_class_names_from_file,
-    load_attribute_from_class,
-    load_class_from_file,
-)
+from captumcv.loaders.util.classLoader import (get_attribute_names_from_class,
+                                               get_class_names_from_file,
+                                               load_attribute_from_class,
+                                               load_class_from_file)
 from captumcv.loaders.util.modelLoader import ImageModelWrapper
+from PIL import Image
 
 
 class Attr(Enum):
@@ -31,6 +24,8 @@ class Attr(Enum):
     NEURON_CONDUCTANCE = "Neuron Conductance"
     NEURON_GUIDED_BACKPROPAGATION = "Neuron Guided Backpropagation"
     DECONVOLUTION = "Deconvolution"
+
+
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 # Create directories for saving models and images
@@ -53,11 +48,11 @@ choose_method = st.selectbox(
     (
         Attr.IG.value,
         Attr.SALIENCY.value,
-        #Attr.TCAV_ALG.value,
-        #Attr.GRADCAM.value,
+        # Attr.TCAV_ALG.value,
+        # Attr.GRADCAM.value,
         Attr.NEURON_CONDUCTANCE.value,
-        #Attr.NEURON_GUIDED_BACKPROPAGATION.value,
-        #Attr.DECONVOLUTION.value,
+        # Attr.NEURON_GUIDED_BACKPROPAGATION.value,
+        # Attr.DECONVOLUTION.value,
     ),
 )
 st.write("You selected:", choose_method)
@@ -70,6 +65,8 @@ choosen_layer = None
 attr_dict = None
 neuron_index = None
 target_index = None
+
+
 def parameter_selection():
     if choose_method == Attr.IG.value:
         options = [
@@ -107,7 +104,10 @@ def parameter_selection():
     if choose_method == Attr.DECONVOLUTION.value:
         st.sidebar.text("without parameter")
 
-def __load_model(model_path: str, loader_class_name: str, model_loader_path: str) -> Tuple[torch.nn.Module,ImageModelWrapper]:
+
+def __load_model(
+    model_path: str, loader_class_name: str, model_loader_path: str
+) -> Tuple[torch.nn.Module, ImageModelWrapper]:
     """
     This method loads the model from the given path and returns it.
 
@@ -124,13 +124,16 @@ def __load_model(model_path: str, loader_class_name: str, model_loader_path: str
     if model_loader and issubclass(model_loader, ImageModelWrapper):
         instance: ImageModelWrapper = model_loader(model_path)
         if isinstance(instance.model, torch.nn.DataParallel):
-            model = instance.model.module.to('cpu') # if DataParallel do this to make it work on cpu
+            model = instance.model.module.to(
+                "cpu"
+            )  # if DataParallel do this to make it work on cpu
         else:
             model = instance.model
         return model, instance
-    return None,None
+    return None, None
 
-def __plot(true_img, attr_img) -> 'matplotlib.figure.Figure':
+
+def __plot(true_img, attr_img) -> "matplotlib.figure.Figure":
     # the original image should have the (H,W,C) format
     attr_img = np.flip(
         attr_img, axis=1
@@ -145,9 +148,10 @@ def __plot(true_img, attr_img) -> 'matplotlib.figure.Figure':
     )
     return f
 
-def __get_model_modules(model: torch.nn.Module) -> Dict[str,torch.nn.Module]:
+
+def __get_model_modules(model: torch.nn.Module) -> Dict[str, torch.nn.Module]:
     """
-    This method returns all modules of the given model. 
+    This method returns all modules of the given model.
     Only load the attributes of instance torch.nn.Module.
 
     Args:
@@ -157,7 +161,9 @@ def __get_model_modules(model: torch.nn.Module) -> Dict[str,torch.nn.Module]:
         Tuple[List[str],List[torch.nn.Module]]: returns a tuple of the module names and the modules
     """
     attr = get_attribute_names_from_class(model)
-    nn_modules: List[torch.nn.Module] = [] # contain objects that are of instance torch.nn.Module
+    nn_modules: List[
+        torch.nn.Module
+    ] = []  # contain objects that are of instance torch.nn.Module
     nn_modules_names: List[str] = []
     attr_name: str
     for attr_name in attr:
@@ -167,6 +173,7 @@ def __get_model_modules(model: torch.nn.Module) -> Dict[str,torch.nn.Module]:
             nn_modules.append(attr_obj)
     res_dict = dict(zip(nn_modules_names, nn_modules))
     return res_dict
+
 
 # Function for IG
 def evaluate_button_ig(
@@ -192,7 +199,8 @@ def evaluate_button_ig(
     attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
     f = __plot(img, attribution_np)
     st.pyplot(f)
-    st.write("Evaluation finished") 
+    st.write("Evaluation finished")
+
 
 # demo this only will work for saliency
 def evaluate_button_saliency(
@@ -218,15 +226,42 @@ def evaluate_button_saliency(
     img = np.array(img)  # convert to numpy array
     X_img = model_loader.preprocess_image(image=img)
     attribution = saliency.attribute(X_img, target=0)
-    attribution_np = np.transpose(
-        attribution.squeeze().cpu().numpy(), axes=(1, 2, 0)
-    )
+    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), axes=(1, 2, 0))
     # the original image should have the (H,W,C) format
     f = __plot(img, attribution_np)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
 
+
 def __convert_str_to_tuple(str_input: str) -> Tuple[int]:
+    """
+    Converts a string representation of a tuple of integers into an actual tuple.
+
+    Args:
+        str_input (str): The input string to convert.
+
+    Returns:
+        Tuple[int]: The converted tuple of integers.
+
+    Raises:
+        None.
+
+    Examples:
+        >>> __convert_str_to_tuple("(1, 2, 3)")
+        (1, 2, 3)
+
+        >>> __convert_str_to_tuple("[4, 5, 6]")
+        (4, 5, 6)
+
+        >>> __convert_str_to_tuple("{7, 8, 9}")
+        (7, 8, 9)
+
+    Notes:
+        - The input string should have the format of a tuple containing integers.
+        - The function removes any parentheses, brackets, braces, commas, semicolons, colons, and periods from the input string.
+        - Each integer value in the string is separated by whitespace.
+        - If the input string cannot be converted to a tuple of integers, None is returned.
+    """
     try:
         str_input = str_input.replace("(", "")
         str_input = str_input.replace(")", "")
@@ -238,11 +273,12 @@ def __convert_str_to_tuple(str_input: str) -> Tuple[int]:
         str_input = str_input.replace(";", " ")
         str_input = str_input.replace(":", " ")
         str_input = str_input.replace(".", " ")
-        return tuple(map(int, str_input.split(' ')))
+        return tuple(map(int, str_input.split(" ")))
     except ValueError:
         return None
 
-def __convert_str_to_int(str_input: str) -> Optional[int|Tuple[int]]:
+
+def __convert_str_to_int(str_input: str) -> Optional[int | Tuple[int]]:
     """
     This method converts a string to an int or a tuple of ints.
 
@@ -253,8 +289,9 @@ def __convert_str_to_int(str_input: str) -> Optional[int|Tuple[int]]:
         Optional[int|Tuple[int]]: returns the converted string or None if the conversion failed
     """
     return int(str_input)
-    
-def __try_convert_stt_to_int_or_tuple(str_input: str) -> Optional[int|Tuple[int]]:
+
+
+def __try_convert_stt_to_int_or_tuple(str_input: str) -> Optional[int | Tuple[int]]:
     """
     This method converts a string to an int or a tuple of ints.
 
@@ -269,7 +306,6 @@ def __try_convert_stt_to_int_or_tuple(str_input: str) -> Optional[int|Tuple[int]
         return __convert_str_to_tuple(str_input)
 
 
-
 def evaluate_button_neuron_conductance(
     input_image_path: str,
     model_path: str,
@@ -277,10 +313,11 @@ def evaluate_button_neuron_conductance(
     model_loader_path: str,
     choosen_layer: str,
     neuron_index: str,
-    target_index: str,):
+    target_index: str,
+):
     """
     This method runs the captum algorithm and shows the results.
-    Use with DataParallel https://captum.ai/tutorials/Distributed_Attribution 
+    Use with DataParallel https://captum.ai/tutorials/Distributed_Attribution
 
     Args:
         model_path (str): Path to the model weights
@@ -303,15 +340,22 @@ def evaluate_button_neuron_conductance(
         st.warning("Failed to convert target index to int or tuple of ints")
         return
     target_index_cast = __try_convert_stt_to_int_or_tuple(target_index)
-    attribution = ncond.attribute(X_img, neuron_selector=neuron_index_cast, target=target_index_cast)
-    attribution_np = np.transpose(
-        attribution.squeeze().cpu().numpy(), axes=(1, 2, 0)
+    attribution = ncond.attribute(
+        X_img, neuron_selector=neuron_index_cast, target=target_index_cast
     )
+    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), axes=(1, 2, 0))
     f = __plot(img, attribution_np)
     st.pyplot(f)  # very nice this plots the plt figure !
-    st.write("Evaluation finished")     
+    st.write("Evaluation finished")
+
 
 def device_selection():
+    """
+    Allows the user to select the device (CPU or GPU) for execution.
+
+    Returns:
+        str: Selected device ("cpu" for CPU, "cuda" for GPU).
+    """
     options = ["CPU", "GPU(CUDA)"]
     selected_devices = st.sidebar.radio("choose a device:", options)
     if selected_devices == "CPU":
@@ -325,6 +369,12 @@ def device_selection():
 
 
 def delete_cache():
+    """
+    Deletes cache files when the "Delete cache" button is clicked.
+
+    Returns:
+        None
+    """
     if st.sidebar.button("Delete cache"):
         delete_files_except_gitkeep(CACHE_DIR)
         delete_files_except_gitkeep(PATH_MODEL_LOADER)
@@ -334,19 +384,16 @@ def delete_cache():
         st.sidebar.text("Cache deleted")
 
 
-def instances_selection():
-    options = ["All", "Correct", "Incorrect"]
-    selected_instances = st.sidebar.selectbox("Instances:", options)
-    # Hier sollen über options für Instances implementiert werden
-    if selected_instances == "All":
-        st.sidebar.write("you choose All")
-    elif selected_instances == "Correct":
-        st.sidebar.write("you choose Correct")
-    elif selected_instances == "Incorrect":
-        st.sidebar.write("you choose Incorrect")
-
-
 def delete_files_except_gitkeep(directory):
+    """
+    Deletes files in a directory, except for the ".gitkeep" file.
+
+    Args:
+        directory (str): Path to the directory.
+
+    Returns:
+        None
+    """
     for root, dirs, files in os.walk(directory):
         for file in files:
             if file != ".gitkeep":
@@ -401,9 +448,6 @@ def main():
     st.sidebar.title("Captum GUI")
     # device = device_selection()  # TODO this still need to be done
     delete_cache()
-    # TODO what does this instances thing means ?? seems uneeded
-    # st.sidebar.subheader("Filter by Instances")
-    # instances_selection()
     st.sidebar.subheader("Attribution Method Arguments")
     parameter_selection()
     # upload an image to test
@@ -438,8 +482,12 @@ def main():
     loader_class_name = st.selectbox("Select wanted class:", available_classes)
     st.write("You selected:", loader_class_name)
     if choose_method == Attr.NEURON_CONDUCTANCE.value:
-        neuron_index = st.sidebar.text_input("Insert neuron index (int, tuple[int]):", value="1")
-        target_index = st.sidebar.text_input("Insert target index (int, tuple[int]):", value="1")
+        neuron_index = st.sidebar.text_input(
+            "Insert neuron index (int, tuple[int]):", value="1"
+        )
+        target_index = st.sidebar.text_input(
+            "Insert target index (int, tuple[int]):", value="1"
+        )
         # update the list of layers in the options
         if model_loader_path is None:
             st.write("Please upload a model loader file first")
@@ -447,7 +495,9 @@ def main():
             st.warning("Loading the model to get the layers. This might take a while")
             model, _ = __load_model(model_path, loader_class_name, model_loader_path)
             if model is None:
-                st.warning("Failed to load the class from the file. Try loading the file again")
+                st.warning(
+                    "Failed to load the class from the file. Try loading the file again"
+                )
                 return
             attr_dict = __get_model_modules(model)
             choosen_layer = st.sidebar.selectbox("Choose layer:", attr_dict.keys())
@@ -464,7 +514,15 @@ def main():
                     image_path, model_path, loader_class_name, model_loader_path
                 )
             case Attr.NEURON_CONDUCTANCE.value:
-                evaluate_button_neuron_conductance(image_path, model_path, loader_class_name, model_loader_path, choosen_layer, neuron_index, target_index)
+                evaluate_button_neuron_conductance(
+                    image_path,
+                    model_path,
+                    loader_class_name,
+                    model_loader_path,
+                    choosen_layer,
+                    neuron_index,
+                    target_index,
+                )
             case Attr.NEURON_GUIDED_BACKPROPAGATION.value:
                 pass
             case Attr.DECONVOLUTION.value:
@@ -476,5 +534,8 @@ def main():
             case _:
                 st.write("No method selected")
 
+
 if __name__ == "__main__":
+    main()
+    main()
     main()
