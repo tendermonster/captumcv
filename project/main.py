@@ -1,5 +1,6 @@
 import os
 import pickle
+import uuid
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
@@ -53,7 +54,7 @@ choose_method = st.selectbox(
         Attr.NEURON_CONDUCTANCE.value,
         # Attr.NEURON_GUIDED_BACKPROPAGATION.value,
         # Attr.DECONVOLUTION.value,
-    ),
+    ), key=str(uuid.uuid1())
 )
 st.write("You selected:", choose_method)
 ## Modell  und Parameter auswählen
@@ -76,7 +77,7 @@ def parameter_selection():
             "Riemann_middle",
             "Riemann_trapezoid",
         ]
-        st.sidebar.selectbox("method:", options)
+        st.sidebar.selectbox("method:", options, key=str(uuid.uuid1()))
         if options == "Gausslegendre":
             st.write("aaa")
             st.sidebar.write("you choose Gausslegendre as parameter")
@@ -375,7 +376,7 @@ def delete_cache():
     Returns:
         None
     """
-    if st.sidebar.button("Delete cache"):
+    if st.sidebar.button("Delete cache", key=str(uuid.uuid1())):
         delete_files_except_gitkeep(CACHE_DIR)
         delete_files_except_gitkeep(PATH_MODEL_LOADER)
         delete_files_except_gitkeep(PATH_IMAGE_TMP)
@@ -479,7 +480,7 @@ def main():
     if model_loader_path is not None:
         available_classes = get_class_names_from_file(model_loader_path)
     # show class dropdown
-    loader_class_name = st.selectbox("Select wanted class:", available_classes)
+    loader_class_name = st.selectbox("Select wanted class:", available_classes, key=str(uuid.uuid1()))
     st.write("You selected:", loader_class_name)
     if choose_method == Attr.NEURON_CONDUCTANCE.value:
         neuron_index = st.sidebar.text_input(
@@ -503,7 +504,7 @@ def main():
             choosen_layer = st.sidebar.selectbox("Choose layer:", attr_dict.keys())
             st.sidebar.write(choosen_layer)
     col_eval = st.columns(1)[0]
-    if col_eval.button("Evaluate"):
+    if col_eval.button("Evaluate", key=str(uuid.uuid1())):
         match choose_method:
             case Attr.SALIENCY.value:
                 evaluate_button_saliency(
@@ -536,6 +537,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-    main()
     main()
