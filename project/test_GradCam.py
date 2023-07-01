@@ -19,4 +19,11 @@ guided_gc = GuidedGradCam(model_loader.model, layer_name)
 input_image = model_loader.preprocess_image(image = img)# tensor
 attribution = guided_gc.attribute(input_image, 3)
 
+# Visualize Guided Grad-Cam
+heatmap = attribution.squeeze()
+heatmap = heatmap.detach().numpy()
+heatmap = cv2.applyColorMap((heatmap*255).astype(np.uint8), cv2.COLORMAP_JET)
+
+result = heatmap * 0.3 + input_image*0.5
+
 print(attribution)
