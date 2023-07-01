@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 # this custom loader need to import the ImageModelWrapper class
 from captumcv.loaders.util.modelLoader import ImageModelWrapper
+
 # aswell as the model itself
 from captumcv.models.resnet import ResNet18
 
@@ -37,6 +38,6 @@ class ResNet18Loader(ImageModelWrapper):
             input_shape, target_image_shape, model_path, model, normalization_params
         )
 
-        # custom preprocess_image method can be defined here
-        def preprocess_image(self, *args, **kwargs):
-            return super().preprocess_image(*args, **kwargs)
+    # custom preprocess_image method can be defined here
+    def preprocess_image(self, *args, **kwargs):
+        return super().preprocess_image(*args, **kwargs)
