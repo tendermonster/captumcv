@@ -3,6 +3,8 @@ import torch
 from resources.DLASimpleLoader import DLASimpleLoader
 import os
 from PIL import Image
+import cv2
+import numpy as np
 
 
 model_path = os.path.join(
