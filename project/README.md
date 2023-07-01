@@ -3,10 +3,6 @@
 This is a frontend for the captum library for working with computer vision models.
 The frontend is written in streamlit and is used to visualize the results of the captum library.
 
-# Your Project Name
-
-Short project description or tagline.
-
 ## Introduction
 
 Provide a brief introduction to your project, highlighting its purpose and key features. Explain why users might find it useful or interesting.
