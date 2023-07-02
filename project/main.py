@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import streamlit as st
 import torch
-from captum.attr import IntegratedGradients, NeuronConductance, Saliency
+from captum.attr import IntegratedGradients, NeuronConductance, Saliency, Deconvolution, NeuronGuidedBackprop
 from captum.attr import visualization as viz
 from captumcv.loaders.util.classLoader import (get_attribute_names_from_class,
                                                get_class_names_from_file,
@@ -66,48 +66,6 @@ choosen_layer = None
 attr_dict = None
 neuron_index = None
 target_index = None
-
-
-def parameter_selection():
-    if choose_method == Attr.IG.value:
-        selected_step = st.sidebar.number_input("Insert step:", min_value=50, step=5)
-        options = [
-            "gausslegendre",
-            "riemann_left",
-            "riemann_right",
-            "riemann_middle",
-            "riemann_trapezoid",
-        ]
-        selected_option = st.sidebar.selectbox("Method:", options)
-        if selected_option == "gausslegendre":
-            st.write("aaa")
-            st.sidebar.write("You chose Gausslegendre as the parameter")
-        elif selected_option == "riemann_left":
-            st.sidebar.write("You chose Riemann_left as the parameter")
-        elif selected_option == "riemann_right":
-            st.sidebar.write("You chose Riemann_right as the parameter")
-        elif selected_option == "riemann_middle":
-            st.sidebar.write("You chose Riemann_middle as the parameter")
-        elif selected_option == "riemann_trapezoid":
-            st.sidebar.write("You chose Riemann_trapezoid as the parameter")
-        return selected_option,selected_step
-
-    if choose_method == Attr.SALIENCY.value:
-        pass
-    if choose_method == Attr.TCAV_ALG.value:
-        # need parameter from TCAV
-        st.sidebar.write("you choose TCAV")
-    if choose_method == Attr.GRADCAM.value:
-        # need parameter from GradCam
-        st.sidebar.write("you choose GradCam")
-    if choose_method == Attr.NEURON_CONDUCTANCE.value:
-        pass
-    if choose_method == Attr.NEURON_GUIDED_BACKPROPAGATION.value:
-        pass
-    if choose_method == Attr.DECONVOLUTION.value:
-        pass
-    return None,None
-
 
 def __load_model(
     model_path: str, loader_class_name: str, model_loader_path: str
@@ -244,7 +202,7 @@ def evaluate_button_guided_backprop(
 
 # Function for IG
 def evaluate_button_ig(
-    input_image_path: str, model_path: str, loader_class_name: str, model_loader_path, selected_method:str,selected_step,
+    input_image_path: str, model_path: str, loader_class_name: str, model_loader_path: str, selected_method, selected_steps
 ):
     """
     This method runs the captum algorithm and shows the results.
@@ -263,7 +221,9 @@ def evaluate_button_ig(
     img = np.array(img)  # convert to numpy array
     X_img = model_loader.preprocess_image(image=img)
     #method_ig = parameter_selection()
-    attribution = ig.attribute(X_img, target=0, method=selected_method,n_steps=selected_step)
+    attribution = ig.attribute(X_img, target=0, method=selected_method,n_steps=selected_steps)
+    st.write(selected_method)
+    st.write(selected_steps)
     attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
     f = __plot(img, attribution_np)
     st.pyplot(f)
@@ -516,8 +476,7 @@ def main():
     st.sidebar.title("Captum GUI")
     # device = device_selection()  # TODO this still need to be done
     delete_cache()
-    st.sidebar.subheader("Attribution Method Arguments")
-    selected_method, selected_step= parameter_selection()
+    
     # upload an image to test
     image_path = upload_file(
         "Upload an image",
@@ -549,6 +508,12 @@ def main():
     # show class dropdown
     loader_class_name = st.selectbox("Select wanted class:", available_classes)
     st.write("You selected:", loader_class_name)
+    if choose_method == Attr.IG.value:
+        st.sidebar.subheader("Attribution Method Arguments")
+        method_options = ["gausslegendre", "riemann_left", "riemann_right", "riemann_middle", "riemann_trapezoid"]
+        selected_method = st.sidebar.selectbox("Integrationsmethode", method_options)
+        selected_steps = st.sidebar.number_input("Anzahl der Schritte", min_value=1, step=1)
+
     if choose_method == Attr.NEURON_CONDUCTANCE.value:
         neuron_index = st.sidebar.text_input(
             "Insert neuron index (int, tuple[int]):", value="1"
@@ -579,7 +544,7 @@ def main():
                 )
             case Attr.IG.value:
                 evaluate_button_ig(
-                    image_path, model_path, loader_class_name, model_loader_path,selected_method,selected_step
+                    image_path, model_path, loader_class_name, model_loader_path,selected_method, selected_steps
                 )
             case Attr.NEURON_CONDUCTANCE.value:
                 evaluate_button_neuron_conductance(
