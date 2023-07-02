@@ -167,7 +167,7 @@ def evaluation_button_deconvolution(input_image_path: str,
 
 # Functin for Neuron BPB
 def evaluate_button_guided_backprop(
-    input_image_path: str, model_path: str, loader_class_name: str, model_loader_path
+    input_image_path: str, model_path: str, loader_class_name: str, model_loader_path,choosen_layer: str,
 ):
     """
     This method runs the captum algorithm and shows the results.
@@ -178,7 +178,7 @@ def evaluate_button_guided_backprop(
         model_loader_path (str): model loader python file path
     """
     model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
-    
+    layer = load_attribute_from_class(model, choosen_layer)
     #layer = load_attribute_from_class(model)
     if model is None:
         st.warning("Failed to load the class from the file. Try loading the file again")
@@ -189,7 +189,8 @@ def evaluate_button_guided_backprop(
     
     gbpp = NeuronGuidedBackprop(
         model,
-        model.linear,
+        layer
+        #model.linear,
     )
     #neuron_index_cast = __try_convert_stt_to_int_or_tuple(neuron_index)
     #if neuron_index_cast is None:
@@ -513,7 +514,20 @@ def main():
         method_options = ["gausslegendre", "riemann_left", "riemann_right", "riemann_middle", "riemann_trapezoid"]
         selected_method = st.sidebar.selectbox("Integrationsmethode", method_options)
         selected_steps = st.sidebar.number_input("Anzahl der Schritte", min_value=1, step=1)
-
+    if choose_method == Attr.NEURON_GUIDED_BACKPROPAGATION.value:
+        if model_loader_path is None:
+            st.write("Please upload a model loader file first")
+        else:
+            st.warning("Loading the model to get the layers. This might take a while")
+            model, _ = __load_model(model_path, loader_class_name, model_loader_path)
+            if model is None:
+                st.warning(
+                    "Failed to load the class from the file. Try loading the file again"
+                )
+                return
+            attr_dict = __get_model_modules(model)
+            choosen_layer = st.sidebar.selectbox("Choose layer:", attr_dict.keys())
+            st.sidebar.write(choosen_layer)
     if choose_method == Attr.NEURON_CONDUCTANCE.value:
         neuron_index = st.sidebar.text_input(
             "Insert neuron index (int, tuple[int]):", value="1"
@@ -558,7 +572,7 @@ def main():
                 )
             case Attr.NEURON_GUIDED_BACKPROPAGATION.value:
                 evaluate_button_guided_backprop(
-            image_path, model_path, loader_class_name, model_loader_path
+            image_path, model_path, loader_class_name, model_loader_path,choosen_layer,
         )
 
             case Attr.DECONVOLUTION.value:
