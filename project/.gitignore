@@ -3,6 +3,7 @@
 **/*.pth
 **/*.zip
 tinker.py
+misc
 misc/*
 
 captumcv/model_weights_bck/*
