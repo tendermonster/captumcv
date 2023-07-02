@@ -52,7 +52,7 @@ choose_method = st.selectbox(
         # Attr.TCAV_ALG.value,
         # Attr.GRADCAM.value,
         Attr.NEURON_CONDUCTANCE.value,
-        Attr.NEURON_GUIDED_BACKPROPAGATION.value,
+        #Attr.NEURON_GUIDED_BACKPROPAGATION.value,
         Attr.DECONVOLUTION.value,
     ),
 )
@@ -164,41 +164,6 @@ def evaluation_button_deconvolution(input_image_path: str,
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
 
-
-# Functin for Neuron BPB
-def evaluate_button_guided_backprop(
-    input_image_path: str, model_path: str, loader_class_name: str, model_loader_path
-):
-    """
-    This method runs the captum algorithm and shows the results.
-
-    Args:
-        model_path (str): Path to the model weights
-        loader_class_name (str): choosen class loader name
-        model_loader_path (str): model loader python file path
-    """
-    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
-    
-    #layer = load_attribute_from_class(model)
-    if model is None:
-        st.warning("Failed to load the class from the file. Try loading the file again")
-        return
-    img = Image.open(input_image_path)
-    img = np.array(img)
-    X_img = model_loader.preprocess_image(image=img)
-    
-    gbpp = NeuronGuidedBackprop(
-        model,
-        model.linear,
-    )
-    #neuron_index_cast = __try_convert_stt_to_int_or_tuple(neuron_index)
-    #if neuron_index_cast is None:
-        #st.warning("Failed to convert neuron index to int or tuple of ints")
-    attribution = gbpp.attribute(X_img, neuron_selector=1)
-    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
-    f = __plot(img, attribution_np)
-    st.pyplot(f)
-    st.write("Evaluation finished")
 
 # Function for IG
 def evaluate_button_ig(
@@ -557,10 +522,7 @@ def main():
                     target_index,
                 )
             case Attr.NEURON_GUIDED_BACKPROPAGATION.value:
-                evaluate_button_guided_backprop(
-            image_path, model_path, loader_class_name, model_loader_path
-        )
-
+                pass
             case Attr.DECONVOLUTION.value:
                     evaluation_button_deconvolution(
             image_path, model_path, loader_class_name, model_loader_path
