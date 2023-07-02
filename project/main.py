@@ -7,14 +7,23 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import streamlit as st
 import torch
-from captum.attr import IntegratedGradients, NeuronConductance, Saliency, Deconvolution, NeuronGuidedBackprop
+from captum.attr import (
+    Deconvolution,
+    IntegratedGradients,
+    NeuronConductance,
+    NeuronGuidedBackprop,
+    Saliency,
+)
 from captum.attr import visualization as viz
-from captumcv.loaders.util.classLoader import (get_attribute_names_from_class,
-                                               get_class_names_from_file,
-                                               load_attribute_from_class,
-                                               load_class_from_file)
-from captumcv.loaders.util.modelLoader import ImageModelWrapper
 from PIL import Image
+
+from captumcv.loaders.util.classLoader import (
+    get_attribute_names_from_class,
+    get_class_names_from_file,
+    load_attribute_from_class,
+    load_class_from_file,
+)
+from captumcv.loaders.util.modelLoader import ImageModelWrapper
 
 
 class Attr(Enum):
@@ -52,7 +61,7 @@ choose_method = st.selectbox(
         # Attr.TCAV_ALG.value,
         # Attr.GRADCAM.value,
         Attr.NEURON_CONDUCTANCE.value,
-        #Attr.NEURON_GUIDED_BACKPROPAGATION.value,
+        Attr.NEURON_GUIDED_BACKPROPAGATION.value,
         Attr.DECONVOLUTION.value,
     ),
 )
@@ -190,7 +199,6 @@ def evaluate_button_guided_backprop(
     gbpp = NeuronGuidedBackprop(
         model,
         layer
-        #model.linear,
     )
     neuron_index_cast = __try_convert_stt_to_int_or_tuple(neuron_index)
     if neuron_index_cast is None:
