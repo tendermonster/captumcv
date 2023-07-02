@@ -52,7 +52,7 @@ choose_method = st.selectbox(
         # Attr.TCAV_ALG.value,
         # Attr.GRADCAM.value,
         Attr.NEURON_CONDUCTANCE.value,
-        Attr.NEURON_GUIDED_BACKPROPAGATION.value,
+        #Attr.NEURON_GUIDED_BACKPROPAGATION.value,
         Attr.DECONVOLUTION.value,
     ),
 )
