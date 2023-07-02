@@ -8,11 +8,26 @@ import torchvision.transforms as transforms
 
 
 class ImageModelWrapper(object):
-    """Wrapper base class for image models."""
+    """
+    Wrapper base class for image models.
 
-    def __init__(self, input_shape, target_image_shape: List[int], model_path: str, model, normalization_params):
-        self.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu")
+    Args:
+        input_shape: Shape of the input image.
+        target_image_shape (List[int]): Target shape of the image.
+        model_path (str): Path to the model file.
+        model: The model object.
+        normalization_params: Normalization parameters for image preprocessing.
+    """
+
+    def __init__(
+        self,
+        input_shape,
+        target_image_shape: List[int],
+        model_path: str,
+        model,
+        normalization_params,
+    ):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # loaded model
         self.input_shape = input_shape
         self.target_image_shape = target_image_shape
@@ -24,8 +39,17 @@ class ImageModelWrapper(object):
             # else:
             # raise Exception("Model path does not exist")
         # shape of the input image in this model
-    
+
     def change_device(self, device: str):
+        """
+        Changes the device on which the model is loaded.
+
+        Args:
+            device (str): Device name ('cpu' or 'cuda').
+
+        Returns:
+            None
+        """
         # TODO add all check so that model changes device successfully
         if self.device == device:
             return
@@ -33,6 +57,15 @@ class ImageModelWrapper(object):
         self.model.to(device)
 
     def predict(self, X: torch.Tensor) -> torch.Tensor:
+        """
+        Performs prediction on the input tensor.
+
+        Args:
+            X (torch.Tensor): Input tensor.
+
+        Returns:
+            torch.Tensor: Model output tensor.
+        """
         with torch.no_grad():
             output = self.model(X.to(self.device))
         return output
@@ -44,13 +77,13 @@ class ImageModelWrapper(object):
         This method can be overridden if any custom preprocessing is needed.
 
         Args:
-            args[0]: Pillow Image or 
+            args[0]: Pillow Image or
             kwargs["image"]: Pillow Image or
         Returns:
             torch.Tensor: _description_
         """
         if "image" in kwargs:
-            image = kwargs['image']
+            image = kwargs["image"]
         elif args:
             image = args[0]
         else:
@@ -60,7 +93,8 @@ class ImageModelWrapper(object):
                 transforms.ToTensor(),
                 transforms.Resize(self.target_image_shape),  # in case of cifar10
                 transforms.Normalize(
-                    mean=self.normalization_params["mean"], std=self.normalization_params["std"]
+                    mean=self.normalization_params["mean"],
+                    std=self.normalization_params["std"],
                 ),
             ]
         )
@@ -69,7 +103,15 @@ class ImageModelWrapper(object):
         return reshaped_image
 
     def __try_loading_model(self, model_path: str):
-        # prepare model
+        """
+        Tries to load the model from the provided model path.
+
+        Args:
+            model_path (str): Path to the model file.
+
+        Returns:
+            None
+        """
         self.model = self.model.to(self.device)
         try:
             # todo do some checks if file exists or so
@@ -89,5 +131,10 @@ class ImageModelWrapper(object):
             print(e)
 
     def get_input_shape(self):
-        """returns the shape of an input image."""
+        """
+        Returns the shape of an input image.
+
+        Returns:
+            Tuple[int]: Input image shape.
+        """
         return self.input_shape
