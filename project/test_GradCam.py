@@ -3,7 +3,7 @@ import torch
 from resources.DLASimpleLoader import DLASimpleLoader
 import os
 from PIL import Image
-import cv2
+#import cv2
 import numpy as np
 
 
@@ -15,17 +15,17 @@ img = Image.open(
 )  
 
 model_loader = DLASimpleLoader(model_path)
-layer_name = ... # only layers with single tensor output supported
+layer_name = model_loader.model.linear # only layers with single tensor output supported
 guided_gc = GuidedGradCam(model_loader.model, layer_name)
 
 input_image = model_loader.preprocess_image(image = img)# tensor
 attribution = guided_gc.attribute(input_image, 3)
 
 # Visualize Guided Grad-Cam
-heatmap = attribution.squeeze()
-heatmap = heatmap.detach().numpy()
-heatmap = cv2.applyColorMap((heatmap*255).astype(np.uint8), cv2.COLORMAP_JET)
+#heatmap = attribution.squeeze()
+#heatmap = heatmap.detach().numpy()
+#heatmap = cv2.applyColorMap((heatmap*255).astype(np.uint8), cv2.COLORMAP_JET)
 
-result = heatmap * 0.3 + input_image*0.5
+#result = heatmap * 0.3 + input_image*0.5
 
 print(attribution)
