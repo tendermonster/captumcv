@@ -167,7 +167,7 @@ def evaluation_button_deconvolution(input_image_path: str,
 
 # Functin for Neuron BPB
 def evaluate_button_guided_backprop(
-    input_image_path: str, model_path: str, loader_class_name: str, model_loader_path,choosen_layer: str,
+    input_image_path: str, model_path: str, loader_class_name: str, model_loader_path,choosen_layer: str,neuron_index
 ):
     """
     This method runs the captum algorithm and shows the results.
@@ -192,10 +192,10 @@ def evaluate_button_guided_backprop(
         layer
         #model.linear,
     )
-    #neuron_index_cast = __try_convert_stt_to_int_or_tuple(neuron_index)
-    #if neuron_index_cast is None:
-        #st.warning("Failed to convert neuron index to int or tuple of ints")
-    attribution = gbpp.attribute(X_img, neuron_selector=1)
+    neuron_index_cast = __try_convert_stt_to_int_or_tuple(neuron_index)
+    if neuron_index_cast is None:
+        st.warning("Failed to convert neuron index to int or tuple of ints")
+    attribution = gbpp.attribute(X_img, neuron_selector=neuron_index_cast)
     attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
     f = __plot(img, attribution_np)
     st.pyplot(f)
@@ -515,6 +515,8 @@ def main():
         selected_method = st.sidebar.selectbox("Integrationsmethode", method_options)
         selected_steps = st.sidebar.number_input("Anzahl der Schritte", min_value=1, step=1)
     if choose_method == Attr.NEURON_GUIDED_BACKPROPAGATION.value:
+        neuron_index = st.sidebar.text_input(
+            "Insert neuron index (int, tuple[int]):", value="1")
         if model_loader_path is None:
             st.write("Please upload a model loader file first")
         else:
@@ -572,7 +574,7 @@ def main():
                 )
             case Attr.NEURON_GUIDED_BACKPROPAGATION.value:
                 evaluate_button_guided_backprop(
-            image_path, model_path, loader_class_name, model_loader_path,choosen_layer,
+            image_path, model_path, loader_class_name, model_loader_path,choosen_layer,neuron_index
         )
 
             case Attr.DECONVOLUTION.value:
