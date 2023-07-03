@@ -104,11 +104,12 @@ def __load_model(
     return None, None
 
 
-def __plot(true_img, attr_img) -> "matplotlib.figure.Figure":
+def __plot(true_img, attr_img, flip_axis=True) -> "matplotlib.figure.Figure":
     # the original image should have the (H,W,C) format
-    attr_img = np.flip(
-        attr_img, axis=1
-    )  # flip the image on y axis # BUG why is it even flipped ???
+    if flip_axis:
+        attr_img = np.flip(
+            attr_img, axis=1
+        )  # flip the image on y axis # BUG why is it even flipped ???
     f, ax = viz.visualize_image_attr_multiple(
         attr_img,
         true_img,
