@@ -1,0 +1,22 @@
+## Occlusion
+- https://arxiv.org/abs/1311.2901
+- https://captum.ai/api/occlusion.html
+- https://captum.ai/api/_modules/captum/attr/_core/occlusion.html
+
+## Feature Ablation
+
+- https://captum.ai/api/feature_ablation.html?highlight=ablation
+- https://captum.ai/api/_modules/captum/attr/_core/feature_ablation.html#FeatureAblation
+
+##Saliency
+- https://www.youtube.com/watch?v=R0e_7iFe1NM&list=PL0WmXPhamMFPdqmhr1F5-Vl1KfqZSUtFC&index=2 + occlusion
+- https://arxiv.org/abs/1312.6034
+- https://captum.ai/api/saliency.html#captum.attr.Saliency
+- https://captum.ai/api/_modules/captum/attr/_core/saliency.html
+
+### Paper to review
+- https://arxiv.org/abs/1711.11279
+- directional derivatives - https://tutorial.math.lamar.edu/classes/calciii/directionalderiv.aspx
+- https://github.com/tensorflow/tcav   ->    https://pypi.org/project/tcav/
+- https://christophm.github.io/interpretable-ml-book/detecting-concepts.html
+-
