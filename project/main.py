@@ -170,7 +170,7 @@ def evaluation_button_deconvolution(input_image_path: str,
         attribution.squeeze().cpu().numpy(), axes=(1, 2, 0)
     )
     # the original image should have the (H,W,C) format
-    f = __plot(img, attribution_np)
+    f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
 
@@ -206,7 +206,7 @@ def evaluate_button_guided_backprop(
         st.warning("Failed to convert neuron index to int or tuple of ints")
     attribution = gbpp.attribute(X_img, neuron_selector=neuron_index_cast)
     attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
-    f = __plot(img, attribution_np)
+    f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)
     st.write("Evaluation finished")
 
@@ -382,7 +382,7 @@ def evaluate_button_neuron_conductance(
         X_img, neuron_selector=neuron_index_cast, target=target_index_cast
     )
     attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), axes=(1, 2, 0))
-    f = __plot(img, attribution_np)
+    f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
 
