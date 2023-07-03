@@ -374,11 +374,11 @@ def evaluate_button_gradcam(
         return
     target_index_cast = __try_convert_stt_to_int_or_tuple(target_index)
     attribution = guided_gc.attribute(X_img, target_index_cast)
-    attribution_np = attribution.squeeze().detach().numpy()
-    heatmap = cv2.applyColorMap((attribution_np*255).astype(np.uint8), cv2.COLORMAP_JET)
-    #result = heatmap*0.3 + input_image*0.5
+    attribution_np = np.transpose(
+        attribution.squeeze().detach().cpu().numpy(), axes=(1, 2, 0)
+    )
     #attribution_np = np.transpose(attribution.squeeze().cpu().numpy())
-    f = __plot(img, heatmap)
+    f = __plot(img, attribution_np)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
 
