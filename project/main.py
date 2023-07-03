@@ -65,8 +65,8 @@ choose_method = st.selectbox(
     (
         Attr.IG.value,
         Attr.SALIENCY.value,
-        # Attr.TCAV_ALG.value,
-        # Attr.GRADCAM.value,
+        Attr.TCAV_ALG.value,
+        Attr.GRADCAM.value,
         Attr.NEURON_CONDUCTANCE.value,
         Attr.NEURON_GUIDED_BACKPROPAGATION.value,
         Attr.DECONVOLUTION.value,
@@ -392,6 +392,50 @@ def evaluate_button_neuron_conductance(
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
 
+def evaluate_button_TCAV(
+    input_image_path: str,
+    model_path: str,
+    loader_class_name: str,
+    model_loader_path: str,
+    choosen_layer: str,
+    target_index: str,
+):
+    """
+    This method runs the captum algorithm and shows the results.
+    Use with DataParallel https://captum.ai/tutorials/Distributed_Attribution
+
+    Args:
+        model_path (str): Path to the model weights
+        loader_class_name (str): chosen class loader name
+        model_loader_path (str): model loader python file path
+    """
+    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
+    layer = load_attribute_from_class(model, choosen_layer)
+    if model is None:
+        st.warning("Failed to load the class from the file. Try loading the file again")
+        return
+    img = Image.open(input_image_path)
+    img = np.array(img)  # convert to numpy array
+    X_img = model_loader.preprocess_image(image=img)
+
+    # Add TCAV Implementation from testTCAV.py
+    layer_attr_method = LayerIntegratedGradients(model_loader.model, None, multiply_by_inputs=False)
+    tcav = TCAV(model=model_loader.model, layers=layer, layer_attr_method=layer_attr_method)
+
+    if target_index is None:
+        st.warning("Failed to convert target index to int or tuple of ints")
+        return
+    # instead of target_index?
+    #target_index_cast = __try_convert_stt_to_int_or_tuple(target_index)
+    tcav_scores_w_random = tcav.interpret(inputs=X_img,
+                                    experimental_sets=...,
+                                    target=target_index,
+                                    n_steps=5,
+                                    )
+    # Bar plot for tcav
+    f = __plot(...) # better own method
+    st.pyplot(f)  # very nice this plots the plt figure !
+    st.write("Evaluation finished")
 
 def device_selection():
     """
@@ -597,7 +641,15 @@ def main():
             image_path, model_path, loader_class_name, model_loader_path
         )
             case Attr.TCAV_ALG.value:
-                pass
+                evaluate_button_TCAV(
+                    image_path,
+                    model_path,
+                    loader_class_name,
+                    model_loader_path,
+                    choosen_layer,
+                    neuron_index,
+                    target_index,
+                )
             case Attr.GRADCAM.value:
                 pass
             case _:
