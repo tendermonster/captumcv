@@ -175,6 +175,9 @@ def evaluation_button_deconvolution(input_image_path: str,
     f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
+    prediction = model(X_img)
+    predicted_class = prediction.argmax(dim=1)
+    st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
 
 
 # Functin for Neuron BPB
@@ -211,6 +214,9 @@ def evaluate_button_guided_backprop(
     f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)
     st.write("Evaluation finished")
+    prediction = model(X_img)
+    predicted_class = prediction.argmax(dim=1)
+    st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
 
 # Function for IG
 def evaluate_button_ig(
@@ -240,7 +246,9 @@ def evaluate_button_ig(
     f = __plot(img, attribution_np)
     st.pyplot(f)
     st.write("Evaluation finished")
-
+    prediction = model(X_img)
+    predicted_class = prediction.argmax(dim=1)
+    st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
 
 # demo this only will work for saliency
 def evaluate_button_saliency(
@@ -271,6 +279,9 @@ def evaluate_button_saliency(
     f = __plot(img, attribution_np)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
+    prediction = model(X_img)
+    predicted_class = prediction.argmax(dim=1)
+    st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
 
 
 def __convert_str_to_tuple(str_input: str) -> Tuple[int]:
@@ -387,6 +398,9 @@ def evaluate_button_neuron_conductance(
     f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
+    prediction = model(X_img)
+    predicted_class = prediction.argmax(dim=1)
+    st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
 
 def evaluate_button_gradcam(
     input_image_path: str,
@@ -427,6 +441,9 @@ def evaluate_button_gradcam(
     f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
+    prediction = model(X_img)
+    predicted_class = prediction.argmax(dim=1)
+    st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
 
 def device_selection():
     """
@@ -523,8 +540,14 @@ def upload_file(
 
 
 def main():
+    with st.sidebar.container():
+        image = Image.open("D:\\Desktop\\group-1\\project\\build\\captum_logo.png")
+        image = image.resize((190, 50)) 
+        st.image(image, use_column_width=True)
     # Layout of the sidebar
-    st.sidebar.title("Captum GUI")
+    #st.sidebar.image("D:\\Desktop\\group-1\\project\\build\\captum_logo.png",use_column_width=True)
+        #st.sidebar.markdown("<h1 style='font-size: 32px;'>Captum GUI</h1>", unsafe_allow_html=True)
+    
     # device = device_selection()  # TODO this still need to be done
     delete_cache()
     
@@ -559,6 +582,7 @@ def main():
     # show class dropdown
     loader_class_name = st.selectbox("Select wanted class:", available_classes)
     st.write("You selected:", loader_class_name)
+    
     if choose_method == Attr.IG.value:
         st.sidebar.subheader("Attribution Method Arguments")
         method_options = ["gausslegendre", "riemann_left", "riemann_right", "riemann_middle", "riemann_trapezoid"]
@@ -662,7 +686,21 @@ def main():
                 )
             case _:
                 st.write("No method selected")
-
+    st.sidebar.markdown("""
+    <h2>Predict List:</h2>
+    <ul>
+        <li>airplane: 0</li>
+        <li>automobile: 1</li>
+        <li>bird: 2</li>
+        <li>cat: 3</li>
+        <li>deer: 4</li>
+        <li>dog: 5</li>
+        <li>frog: 6</li>
+        <li>horse: 7</li>
+        <li>ship: 8</li>
+        <li>truck: 9</li>
+    </ul>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
