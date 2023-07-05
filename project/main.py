@@ -570,7 +570,6 @@ def main():
         if model_loader_path is None:
             st.write("Please upload a model loader file first")
         else:
-            st.warning("Loading the model to get the layers. This might take a while")
             model, _ = __load_model(model_path, loader_class_name, model_loader_path)
             if model is None:
                 st.warning(
@@ -591,7 +590,6 @@ def main():
         if model_loader_path is None:
             st.write("Please upload a model loader file first")
         else:
-            st.warning("Loading the model to get the layers. This might take a while")
             model, _ = __load_model(model_path, loader_class_name, model_loader_path)
             if model is None:
                 st.warning(
@@ -609,7 +607,6 @@ def main():
         if model_loader_path is None:
             st.write("Please upload a model loader file first")
         else:
-            st.warning("Loading the model to get the layers. This might take a while")
             model, _ = __load_model(model_path, loader_class_name, model_loader_path)
             if model is None:
                 st.warning(
@@ -619,6 +616,8 @@ def main():
             attr_dict = __get_model_modules(model)
             choosen_layer = st.sidebar.selectbox("Choose layer:", attr_dict.keys())
             st.sidebar.write(choosen_layer)
+    if choose_method == Attr.TCAV_ALG.value:
+        pass
     col_eval = st.columns(1)[0]
     if col_eval.button("Evaluate"):
         match choose_method:
