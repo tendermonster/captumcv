@@ -4,11 +4,13 @@ import uuid
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
+import cv2
 import numpy as np
 import streamlit as st
 import torch
 from captum.attr import (
     Deconvolution,
+    GuidedGradCam,
     IntegratedGradients,
     NeuronConductance,
     NeuronGuidedBackprop,
@@ -37,7 +39,7 @@ class Attr(Enum):
     IG = "Integrated gradients"
     SALIENCY = "Saliency"
     TCAV_ALG = "TCAV"
-    GRADCAM = "GradCam"
+    GRADCAM = "Guided GradCam"
     NEURON_CONDUCTANCE = "Neuron Conductance"
     NEURON_GUIDED_BACKPROPAGATION = "Neuron Guided Backpropagation"
     DECONVOLUTION = "Deconvolution"
@@ -111,11 +113,12 @@ def __load_model(
     return None, None
 
 
-def __plot(true_img, attr_img) -> "matplotlib.figure.Figure":
+def __plot(true_img, attr_img, flip_axis=True) -> "matplotlib.figure.Figure":
     # the original image should have the (H,W,C) format
-    attr_img = np.flip(
-        attr_img, axis=1
-    )  # flip the image on y axis # BUG why is it even flipped ???
+    if flip_axis:
+        attr_img = np.flip(
+            attr_img, axis=1
+        )  # flip the image on y axis # BUG why is it even flipped ???
     f, ax = viz.visualize_image_attr_multiple(
         attr_img,
         true_img,
@@ -392,6 +395,45 @@ def evaluate_button_neuron_conductance(
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
 
+def evaluate_button_gradcam(
+    input_image_path: str,
+    model_path: str,
+    loader_class_name: str,
+    model_loader_path: str,
+    choosen_layer: str,
+    target_index: str,
+):
+    """
+    This method runs the captum algorithm and shows the results.
+    Use with DataParallel https://captum.ai/tutorials/Distributed_Attribution
+
+    Args:
+        model_path (str): Path to the model weights
+        loader_class_name (str): chosen class loader name
+        model_loader_path (str): model loader python file path
+    """
+    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
+    layer = load_attribute_from_class(model, choosen_layer)
+    if model is None:
+        st.warning("Failed to load the class from the file. Try loading the file again")
+        return
+    img = Image.open(input_image_path)
+    img = np.array(img)  # convert to numpy array
+    X_img = model_loader.preprocess_image(image=img)
+    guided_gc = GuidedGradCam(model, layer)
+
+    if target_index is None:
+        st.warning("Failed to convert target index to int or tuple of ints")
+        return
+    target_index_cast = __try_convert_stt_to_int_or_tuple(target_index)
+    attribution = guided_gc.attribute(X_img, target_index_cast)
+    attribution_np = np.transpose(
+        attribution.squeeze().detach().cpu().numpy(), axes=(1, 2, 0)
+    )
+    #attribution_np = np.transpose(attribution.squeeze().cpu().numpy())
+    f = __plot(img, attribution_np, flip_axis=False)
+    st.pyplot(f)  # very nice this plots the plt figure !
+    st.write("Evaluation finished")
 def evaluate_button_TCAV(
     input_image_path: str,
     model_path: str,
@@ -610,6 +652,24 @@ def main():
             attr_dict = __get_model_modules(model)
             choosen_layer = st.sidebar.selectbox("Choose layer:", attr_dict.keys())
             st.sidebar.write(choosen_layer)
+    if choose_method == Attr.GRADCAM.value:
+        target_index = st.sidebar.text_input(
+            "Insert target index (int, tuple[int]):", value="1"
+        )
+        # update the list of layers in the options
+        if model_loader_path is None:
+            st.write("Please upload a model loader file first")
+        else:
+            st.warning("Loading the model to get the layers. This might take a while")
+            model, _ = __load_model(model_path, loader_class_name, model_loader_path)
+            if model is None:
+                st.warning(
+                    "Failed to load the class from the file. Try loading the file again"
+                )
+                return
+            attr_dict = __get_model_modules(model)
+            choosen_layer = st.sidebar.selectbox("Choose layer:", attr_dict.keys())
+            st.sidebar.write(choosen_layer)
     col_eval = st.columns(1)[0]
     if col_eval.button("Evaluate"):
         match choose_method:
@@ -637,9 +697,9 @@ def main():
         )
 
             case Attr.DECONVOLUTION.value:
-                    evaluation_button_deconvolution(
-            image_path, model_path, loader_class_name, model_loader_path
-        )
+                evaluation_button_deconvolution(
+                    image_path, model_path, loader_class_name, model_loader_path
+                )  
             case Attr.TCAV_ALG.value:
                 evaluate_button_TCAV(
                     image_path,
@@ -651,7 +711,14 @@ def main():
                     target_index,
                 )
             case Attr.GRADCAM.value:
-                pass
+                evaluate_button_gradcam(
+                    image_path,
+                    model_path,
+                    loader_class_name,
+                    model_loader_path,
+                    choosen_layer,
+                    target_index,
+                )
             case _:
                 st.write("No method selected")
 
