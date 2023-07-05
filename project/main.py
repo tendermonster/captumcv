@@ -434,6 +434,7 @@ def evaluate_button_gradcam(
     f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
+    
 def evaluate_button_TCAV(
     input_image_path: str,
     model_path: str,
