@@ -2,10 +2,10 @@
 from typing import TYPE_CHECKING
 
 # this custom loader need to import the ImageModelWrapper class
-from captumcv.loaders.util.modelLoader import ImageModelWrapper
+from captumcv.loaders.modelLoader import ImageModelWrapper
 
 # aswell as the model itself
-from captumcv.models.resnet import ResNet18
+from captumcv.tmp.model_def.resnet import ResNet18
 
 # do not worry if imports are not found. They will work as soon as
 # file files will be uploaded via frontend

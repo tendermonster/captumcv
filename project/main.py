@@ -19,13 +19,13 @@ from captum.attr import (
 from captum.attr import visualization as viz
 from PIL import Image
 
-from captumcv.loaders.util.classLoader import (
+from captumcv.loaders.classLoader import (
     get_attribute_names_from_class,
     get_class_names_from_file,
     load_attribute_from_class,
     load_class_from_file,
 )
-from captumcv.loaders.util.modelLoader import ImageModelWrapper
+from captumcv.loaders.modelLoader import ImageModelWrapper
 
 
 class Attr(Enum):
@@ -44,13 +44,13 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 # BUG this is unexpected behaviour. os.path.join returning tuple. Steamlit might be involved! Need to report
 CACHE_DIR = os.path.join(".cache")
 CACHE_DIR = "".join(CACHE_DIR)
-PATH_IMAGE_TMP = (os.path.join(".", "captumcv", "image_tmp"),)
+PATH_IMAGE_TMP = (os.path.join(".", "captumcv", "tmp", "image"),)
 PATH_IMAGE_TMP = "".join(PATH_IMAGE_TMP)
-PATH_MODEL_WEIGHTS = (os.path.join(".", "captumcv", "model_weights"),)
+PATH_MODEL_WEIGHTS = (os.path.join(".", "captumcv", "tmp", "model_weights"),)
 PATH_MODEL_WEIGHTS = "".join(PATH_MODEL_WEIGHTS)
-PATH_MODEL_LOADER = (os.path.join(".", "captumcv", "loaders", "tmp"),)
+PATH_MODEL_LOADER = (os.path.join(".", "captumcv", "tmp", "model_loader"),)
 PATH_MODEL_LOADER = "".join(PATH_MODEL_LOADER)
-PATH_MODEL_DEF_PY = (os.path.join(".", "captumcv", "models"),)
+PATH_MODEL_DEF_PY = (os.path.join(".", "captumcv", "tmp", "model_def"),)
 PATH_MODEL_DEF_PY = "".join(PATH_MODEL_DEF_PY)
 
 os.makedirs(CACHE_DIR, exist_ok=True)
@@ -77,6 +77,7 @@ choosen_layer = None
 attr_dict = None
 neuron_index = None
 target_index = None
+
 
 def __load_model(
     model_path: str, loader_class_name: str, model_loader_path: str
@@ -148,9 +149,14 @@ def __get_model_modules(model: torch.nn.Module) -> Dict[str, torch.nn.Module]:
     res_dict = dict(zip(nn_modules_names, nn_modules))
     return res_dict
 
+
 # Funktion for Deconvolution
-def evaluation_button_deconvolution(input_image_path: str,
-    model_path: str,    loader_class_name: str,    model_loader_path: str,):
+def evaluation_button_deconvolution(
+    input_image_path: str,
+    model_path: str,
+    loader_class_name: str,
+    model_loader_path: str,
+):
     """
     This method runs the captum algorithm and shows the results.
 
@@ -168,9 +174,7 @@ def evaluation_button_deconvolution(input_image_path: str,
     img = np.array(img)  # convert to numpy array
     X_img = model_loader.preprocess_image(image=img)
     attribution = deconvolution.attribute(X_img, target=0)
-    attribution_np = np.transpose(
-        attribution.squeeze().cpu().numpy(), axes=(1, 2, 0)
-    )
+    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), axes=(1, 2, 0))
     # the original image should have the (H,W,C) format
     f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)  # very nice this plots the plt figure !
@@ -179,7 +183,12 @@ def evaluation_button_deconvolution(input_image_path: str,
 
 # Functin for Neuron BPB
 def evaluate_button_guided_backprop(
-    input_image_path: str, model_path: str, loader_class_name: str, model_loader_path,choosen_layer: str,neuron_index
+    input_image_path: str,
+    model_path: str,
+    loader_class_name: str,
+    model_loader_path,
+    choosen_layer: str,
+    neuron_index,
 ):
     """
     This method runs the captum algorithm and shows the results.
@@ -191,18 +200,15 @@ def evaluate_button_guided_backprop(
     """
     model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
     layer = load_attribute_from_class(model, choosen_layer)
-    #layer = load_attribute_from_class(model)
+    # layer = load_attribute_from_class(model)
     if model is None:
         st.warning("Failed to load the class from the file. Try loading the file again")
         return
     img = Image.open(input_image_path)
     img = np.array(img)
     X_img = model_loader.preprocess_image(image=img)
-    
-    gbpp = NeuronGuidedBackprop(
-        model,
-        layer
-    )
+
+    gbpp = NeuronGuidedBackprop(model, layer)
     neuron_index_cast = __try_convert_stt_to_int_or_tuple(neuron_index)
     if neuron_index_cast is None:
         st.warning("Failed to convert neuron index to int or tuple of ints")
@@ -212,9 +218,15 @@ def evaluate_button_guided_backprop(
     st.pyplot(f)
     st.write("Evaluation finished")
 
+
 # Function for IG
 def evaluate_button_ig(
-    input_image_path: str, model_path: str, loader_class_name: str, model_loader_path: str, selected_method, selected_steps
+    input_image_path: str,
+    model_path: str,
+    loader_class_name: str,
+    model_loader_path: str,
+    selected_method,
+    selected_steps,
 ):
     """
     This method runs the captum algorithm and shows the results.
@@ -232,8 +244,10 @@ def evaluate_button_ig(
     img = Image.open(input_image_path)
     img = np.array(img)  # convert to numpy array
     X_img = model_loader.preprocess_image(image=img)
-    #method_ig = parameter_selection()
-    attribution = ig.attribute(X_img, target=0, method=selected_method,n_steps=selected_steps)
+    # method_ig = parameter_selection()
+    attribution = ig.attribute(
+        X_img, target=0, method=selected_method, n_steps=selected_steps
+    )
     st.write(selected_method)
     st.write(selected_steps)
     attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
@@ -388,6 +402,7 @@ def evaluate_button_neuron_conductance(
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
 
+
 def evaluate_button_gradcam(
     input_image_path: str,
     model_path: str,
@@ -423,10 +438,11 @@ def evaluate_button_gradcam(
     attribution_np = np.transpose(
         attribution.squeeze().detach().cpu().numpy(), axes=(1, 2, 0)
     )
-    #attribution_np = np.transpose(attribution.squeeze().cpu().numpy())
+    # attribution_np = np.transpose(attribution.squeeze().cpu().numpy())
     f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
+
 
 def device_selection():
     """
@@ -527,7 +543,7 @@ def main():
     st.sidebar.title("Captum GUI")
     # device = device_selection()  # TODO this still need to be done
     delete_cache()
-    
+
     # upload an image to test
     image_path = upload_file(
         "Upload an image",
@@ -561,12 +577,21 @@ def main():
     st.write("You selected:", loader_class_name)
     if choose_method == Attr.IG.value:
         st.sidebar.subheader("Attribution Method Arguments")
-        method_options = ["gausslegendre", "riemann_left", "riemann_right", "riemann_middle", "riemann_trapezoid"]
+        method_options = [
+            "gausslegendre",
+            "riemann_left",
+            "riemann_right",
+            "riemann_middle",
+            "riemann_trapezoid",
+        ]
         selected_method = st.sidebar.selectbox("Integrationsmethode", method_options)
-        selected_steps = st.sidebar.number_input("Anzahl der Schritte", min_value=1, step=1)
+        selected_steps = st.sidebar.number_input(
+            "Anzahl der Schritte", min_value=1, step=1
+        )
     if choose_method == Attr.NEURON_GUIDED_BACKPROPAGATION.value:
         neuron_index = st.sidebar.text_input(
-            "Insert neuron index (int, tuple[int]):", value="1")
+            "Insert neuron index (int, tuple[int]):", value="1"
+        )
         if model_loader_path is None:
             st.write("Please upload a model loader file first")
         else:
@@ -628,7 +653,12 @@ def main():
                 )
             case Attr.IG.value:
                 evaluate_button_ig(
-                    image_path, model_path, loader_class_name, model_loader_path,selected_method, selected_steps
+                    image_path,
+                    model_path,
+                    loader_class_name,
+                    model_loader_path,
+                    selected_method,
+                    selected_steps,
                 )
             case Attr.NEURON_CONDUCTANCE.value:
                 evaluate_button_neuron_conductance(
@@ -642,13 +672,18 @@ def main():
                 )
             case Attr.NEURON_GUIDED_BACKPROPAGATION.value:
                 evaluate_button_guided_backprop(
-            image_path, model_path, loader_class_name, model_loader_path,choosen_layer,neuron_index
-        )
+                    image_path,
+                    model_path,
+                    loader_class_name,
+                    model_loader_path,
+                    choosen_layer,
+                    neuron_index,
+                )
 
             case Attr.DECONVOLUTION.value:
                 evaluation_button_deconvolution(
                     image_path, model_path, loader_class_name, model_loader_path
-                )  
+                )
             case Attr.TCAV_ALG.value:
                 pass
             case Attr.GRADCAM.value:
