@@ -5,6 +5,9 @@
 tinker.py
 misc
 misc/*
+cav
+
+resources/concepts/*
 
 captumcv/model_weights_bck/*
 
