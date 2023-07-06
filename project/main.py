@@ -26,6 +26,7 @@ from captumcv.loaders.util.classLoader import (
     load_class_from_file,
 )
 from captumcv.loaders.util.modelLoader import ImageModelWrapper
+import json
 
 
 class Attr(Enum):
@@ -77,6 +78,7 @@ choosen_layer = None
 attr_dict = None
 neuron_index = None
 target_index = None
+
 
 def __load_model(
     model_path: str, loader_class_name: str, model_loader_path: str
@@ -148,9 +150,14 @@ def __get_model_modules(model: torch.nn.Module) -> Dict[str, torch.nn.Module]:
     res_dict = dict(zip(nn_modules_names, nn_modules))
     return res_dict
 
+
 # Funktion for Deconvolution
-def evaluation_button_deconvolution(input_image_path: str,
-    model_path: str,    loader_class_name: str,    model_loader_path: str,):
+def evaluation_button_deconvolution(
+    input_image_path: str,
+    model_path: str,
+    loader_class_name: str,
+    model_loader_path: str,
+):
     """
     This method runs the captum algorithm and shows the results.
 
@@ -168,21 +175,26 @@ def evaluation_button_deconvolution(input_image_path: str,
     img = np.array(img)  # convert to numpy array
     X_img = model_loader.preprocess_image(image=img)
     attribution = deconvolution.attribute(X_img, target=0)
-    attribution_np = np.transpose(
-        attribution.squeeze().cpu().numpy(), axes=(1, 2, 0)
-    )
+    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), axes=(1, 2, 0))
     # the original image should have the (H,W,C) format
     f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
-    prediction = model(X_img)
-    predicted_class = prediction.argmax(dim=1)
-    st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
+    st.write(model, X_img)
+    return model, X_img
+    # prediction = model(X_img)
+    # predicted_class = prediction.argmax(dim=1)
+    # st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
 
 
 # Functin for Neuron BPB
 def evaluate_button_guided_backprop(
-    input_image_path: str, model_path: str, loader_class_name: str, model_loader_path,choosen_layer: str,neuron_index
+    input_image_path: str,
+    model_path: str,
+    loader_class_name: str,
+    model_loader_path,
+    choosen_layer: str,
+    neuron_index,
 ):
     """
     This method runs the captum algorithm and shows the results.
@@ -194,18 +206,15 @@ def evaluate_button_guided_backprop(
     """
     model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
     layer = load_attribute_from_class(model, choosen_layer)
-    #layer = load_attribute_from_class(model)
+    # layer = load_attribute_from_class(model)
     if model is None:
         st.warning("Failed to load the class from the file. Try loading the file again")
         return
     img = Image.open(input_image_path)
     img = np.array(img)
     X_img = model_loader.preprocess_image(image=img)
-    
-    gbpp = NeuronGuidedBackprop(
-        model,
-        layer
-    )
+
+    gbpp = NeuronGuidedBackprop(model, layer)
     neuron_index_cast = __try_convert_stt_to_int_or_tuple(neuron_index)
     if neuron_index_cast is None:
         st.warning("Failed to convert neuron index to int or tuple of ints")
@@ -214,13 +223,20 @@ def evaluate_button_guided_backprop(
     f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)
     st.write("Evaluation finished")
-    prediction = model(X_img)
-    predicted_class = prediction.argmax(dim=1)
-    st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
+    label_prediction(model, X_img)
+    # prediction = model(X_img)
+    # predicted_class = prediction.argmax(dim=1)
+    # st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
+
 
 # Function for IG
 def evaluate_button_ig(
-    input_image_path: str, model_path: str, loader_class_name: str, model_loader_path: str, selected_method, selected_steps
+    input_image_path: str,
+    model_path: str,
+    loader_class_name: str,
+    model_loader_path: str,
+    selected_method,
+    selected_steps,
 ):
     """
     This method runs the captum algorithm and shows the results.
@@ -238,17 +254,21 @@ def evaluate_button_ig(
     img = Image.open(input_image_path)
     img = np.array(img)  # convert to numpy array
     X_img = model_loader.preprocess_image(image=img)
-    #method_ig = parameter_selection()
-    attribution = ig.attribute(X_img, target=0, method=selected_method,n_steps=selected_steps)
+    # method_ig = parameter_selection()
+    attribution = ig.attribute(
+        X_img, target=0, method=selected_method, n_steps=selected_steps
+    )
     st.write(selected_method)
     st.write(selected_steps)
     attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
     f = __plot(img, attribution_np)
     st.pyplot(f)
     st.write("Evaluation finished")
-    prediction = model(X_img)
-    predicted_class = prediction.argmax(dim=1)
-    st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
+    # label_prediction(model, X_img)
+    # prediction = model(X_img)
+    # predicted_class = prediction.argmax(dim=1)
+    # st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
+
 
 # demo this only will work for saliency
 def evaluate_button_saliency(
@@ -279,9 +299,10 @@ def evaluate_button_saliency(
     f = __plot(img, attribution_np)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
-    prediction = model(X_img)
-    predicted_class = prediction.argmax(dim=1)
-    st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
+    # return model, X_img
+    # prediction = model(X_img)
+    # predicted_class = prediction.argmax(dim=1)
+    # st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
 
 
 def __convert_str_to_tuple(str_input: str) -> Tuple[int]:
@@ -400,7 +421,11 @@ def evaluate_button_neuron_conductance(
     st.write("Evaluation finished")
     prediction = model(X_img)
     predicted_class = prediction.argmax(dim=1)
-    st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
+    st.markdown(
+        "<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()),
+        unsafe_allow_html=True,
+    )
+
 
 def evaluate_button_gradcam(
     input_image_path: str,
@@ -437,13 +462,41 @@ def evaluate_button_gradcam(
     attribution_np = np.transpose(
         attribution.squeeze().detach().cpu().numpy(), axes=(1, 2, 0)
     )
-    #attribution_np = np.transpose(attribution.squeeze().cpu().numpy())
+    # attribution_np = np.transpose(attribution.squeeze().cpu().numpy())
     f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
     prediction = model(X_img)
     predicted_class = prediction.argmax(dim=1)
-    st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
+    st.markdown(
+        "<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()),
+        unsafe_allow_html=True,
+    )
+
+    # Return the predicted class if needed
+
+
+def label_prediction(
+    input_image_path: str,
+    model_path: str,
+    loader_class_name: str,
+    model_loader_path: str,
+):
+    """
+    This method runs the captum algorithm and shows the results.
+
+    Args:
+        model_path (str): Path to the model weights
+        loader_class_name (str): choosen class loader name
+        model_loader_path (str): model loader python file path
+    """
+    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
+    img = np.array(Image.open(input_image_path))
+    X_img = model_loader.preprocess_image(image=img)
+    prediction = model(X_img)
+    predicted_class = prediction.argmax(dim=1)
+    return predicted_class
+
 
 def device_selection():
     """
@@ -540,17 +593,19 @@ def upload_file(
 
 
 def main():
+    model = None
+    X_img = None
     with st.sidebar.container():
         image = Image.open("D:\\Desktop\\group-1\\project\\build\\captum_logo.png")
-        image = image.resize((190, 50)) 
+        image = image.resize((190, 50))
         st.image(image, use_column_width=True)
     # Layout of the sidebar
-    #st.sidebar.image("D:\\Desktop\\group-1\\project\\build\\captum_logo.png",use_column_width=True)
-        #st.sidebar.markdown("<h1 style='font-size: 32px;'>Captum GUI</h1>", unsafe_allow_html=True)
-    
+    # st.sidebar.image("D:\\Desktop\\group-1\\project\\build\\captum_logo.png",use_column_width=True)
+    # st.sidebar.markdown("<h1 style='font-size: 32px;'>Captum GUI</h1>", unsafe_allow_html=True)
+
     # device = device_selection()  # TODO this still need to be done
     delete_cache()
-    
+
     # upload an image to test
     image_path = upload_file(
         "Upload an image",
@@ -582,15 +637,24 @@ def main():
     # show class dropdown
     loader_class_name = st.selectbox("Select wanted class:", available_classes)
     st.write("You selected:", loader_class_name)
-    
+
     if choose_method == Attr.IG.value:
         st.sidebar.subheader("Attribution Method Arguments")
-        method_options = ["gausslegendre", "riemann_left", "riemann_right", "riemann_middle", "riemann_trapezoid"]
+        method_options = [
+            "gausslegendre",
+            "riemann_left",
+            "riemann_right",
+            "riemann_middle",
+            "riemann_trapezoid",
+        ]
         selected_method = st.sidebar.selectbox("Integrationsmethode", method_options)
-        selected_steps = st.sidebar.number_input("Anzahl der Schritte", min_value=1, step=1)
+        selected_steps = st.sidebar.number_input(
+            "Anzahl der Schritte", min_value=1, step=1
+        )
     if choose_method == Attr.NEURON_GUIDED_BACKPROPAGATION.value:
         neuron_index = st.sidebar.text_input(
-            "Insert neuron index (int, tuple[int]):", value="1")
+            "Insert neuron index (int, tuple[int]):", value="1"
+        )
         if model_loader_path is None:
             st.write("Please upload a model loader file first")
         else:
@@ -644,6 +708,7 @@ def main():
             choosen_layer = st.sidebar.selectbox("Choose layer:", attr_dict.keys())
             st.sidebar.write(choosen_layer)
     col_eval = st.columns(1)[0]
+
     if col_eval.button("Evaluate"):
         match choose_method:
             case Attr.SALIENCY.value:
@@ -652,7 +717,12 @@ def main():
                 )
             case Attr.IG.value:
                 evaluate_button_ig(
-                    image_path, model_path, loader_class_name, model_loader_path,selected_method, selected_steps
+                    image_path,
+                    model_path,
+                    loader_class_name,
+                    model_loader_path,
+                    selected_method,
+                    selected_steps,
                 )
             case Attr.NEURON_CONDUCTANCE.value:
                 evaluate_button_neuron_conductance(
@@ -666,13 +736,17 @@ def main():
                 )
             case Attr.NEURON_GUIDED_BACKPROPAGATION.value:
                 evaluate_button_guided_backprop(
-            image_path, model_path, loader_class_name, model_loader_path,choosen_layer,neuron_index
-        )
-
+                    image_path,
+                    model_path,
+                    loader_class_name,
+                    model_loader_path,
+                    choosen_layer,
+                    neuron_index,
+                )
             case Attr.DECONVOLUTION.value:
                 evaluation_button_deconvolution(
                     image_path, model_path, loader_class_name, model_loader_path
-                )  
+                )
             case Attr.TCAV_ALG.value:
                 pass
             case Attr.GRADCAM.value:
@@ -686,21 +760,44 @@ def main():
                 )
             case _:
                 st.write("No method selected")
-    st.sidebar.markdown("""
-    <h2>Predict List:</h2>
-    <ul>
-        <li>airplane: 0</li>
-        <li>automobile: 1</li>
-        <li>bird: 2</li>
-        <li>cat: 3</li>
-        <li>deer: 4</li>
-        <li>dog: 5</li>
-        <li>frog: 6</li>
-        <li>horse: 7</li>
-        <li>ship: 8</li>
-        <li>truck: 9</li>
-    </ul>
-    """, unsafe_allow_html=True)
+
+    col_pre = st.columns(1)[0]
+    if col_pre.button("prediction"):
+        predicted_class = label_prediction(
+            image_path, model_path, loader_class_name, model_loader_path
+        )
+        st.markdown(
+            "<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()),
+            unsafe_allow_html=True,
+        )
+    labels = st.sidebar.file_uploader("Choose a json file", accept_multiple_files=False)
+    data = json.load(labels)
+    labels = data["plain_text"]["features"]["label"]["names"]
+    st.sidebar.title("all Classes")
+    for i, label in enumerate(labels):
+        st.sidebar.markdown(f"{label}: {i}")
+
+    # predict = st.sidebar.checkbox("show all Classes")
+    # if predict:
+    #     st.sidebar.markdown(
+    #         """
+    #     <h2>Predict List:</h2>
+    #     <ul>
+    #         <li>airplane: 0</li>
+    #         <li>automobile: 1</li>
+    #         <li>bird: 2</li>
+    #         <li>cat: 3</li>
+    #         <li>deer: 4</li>
+    #         <li>dog: 5</li>
+    #         <li>frog: 6</li>
+    #         <li>horse: 7</li>
+    #         <li>ship: 8</li>
+    #         <li>truck: 9</li>
+    #     </ul>
+    #     """,
+    #         unsafe_allow_html=True,
+    #     )
+
 
 if __name__ == "__main__":
     main()
