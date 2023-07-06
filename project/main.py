@@ -4,7 +4,6 @@ import uuid
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
-import cv2
 import numpy as np
 import streamlit as st
 import torch
@@ -596,7 +595,6 @@ def main():
         if model_loader_path is None:
             st.write("Please upload a model loader file first")
         else:
-            st.warning("Loading the model to get the layers. This might take a while")
             model, _ = __load_model(model_path, loader_class_name, model_loader_path)
             if model is None:
                 st.warning(
@@ -617,7 +615,6 @@ def main():
         if model_loader_path is None:
             st.write("Please upload a model loader file first")
         else:
-            st.warning("Loading the model to get the layers. This might take a while")
             model, _ = __load_model(model_path, loader_class_name, model_loader_path)
             if model is None:
                 st.warning(
@@ -635,7 +632,6 @@ def main():
         if model_loader_path is None:
             st.write("Please upload a model loader file first")
         else:
-            st.warning("Loading the model to get the layers. This might take a while")
             model, _ = __load_model(model_path, loader_class_name, model_loader_path)
             if model is None:
                 st.warning(
