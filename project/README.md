@@ -8,7 +8,7 @@ The frontend is written in streamlit and is used to visualize the results of the
 Provide a brief introduction to your project, highlighting its purpose and key features. Explain why users might find it useful or interesting.
 
 ## Requirements
-The code was tested with python 3.8
+The code was tested with python 3.10 and ubuntu 20.04
 
 ## Installation
 1. clone the repository
