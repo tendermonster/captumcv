@@ -67,7 +67,6 @@ choose_method = st.selectbox(
         Attr.DECONVOLUTION.value,
     ),
 )
-st.write("You selected:", choose_method)
 ## Modell  und Parameter auswählen
 # some variables for the parameter selection
 # TODO This is very dangerous way of managing variables !! Just workaround for now
@@ -150,143 +149,6 @@ def __get_model_modules(model: torch.nn.Module) -> Dict[str, torch.nn.Module]:
     return res_dict
 
 
-# Funktion for Deconvolution
-def evaluation_button_deconvolution(
-    input_image_path: str,
-    model_path: str,
-    loader_class_name: str,
-    model_loader_path: str,
-):
-    """
-    This method runs the captum algorithm and shows the results.
-
-    Args:
-        model_path (str): Path to the model weights
-        loader_class_name (str): choosen class loader name
-        model_loader_path (str): model loader python file path
-    """
-    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
-    if model is None:
-        st.warning("Failed to load the class from the file. Try loading the file again")
-        return
-    deconvolution = Deconvolution(model)
-    img = Image.open(input_image_path)
-    img = np.array(img)  # convert to numpy array
-    X_img = model_loader.preprocess_image(image=img)
-    attribution = deconvolution.attribute(X_img, target=0)
-    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), axes=(1, 2, 0))
-    # the original image should have the (H,W,C) format
-    f = __plot(img, attribution_np, flip_axis=False)
-    st.pyplot(f)  # very nice this plots the plt figure !
-    st.write("Evaluation finished")
-
-
-# Functin for Neuron BPB
-def evaluate_button_guided_backprop(
-    input_image_path: str,
-    model_path: str,
-    loader_class_name: str,
-    model_loader_path,
-    choosen_layer: str,
-    neuron_index,
-):
-    """
-    This method runs the captum algorithm and shows the results.
-
-    Args:
-        model_path (str): Path to the model weights
-        loader_class_name (str): choosen class loader name
-        model_loader_path (str): model loader python file path
-    """
-    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
-    layer = load_attribute_from_class(model, choosen_layer)
-    # layer = load_attribute_from_class(model)
-    if model is None:
-        st.warning("Failed to load the class from the file. Try loading the file again")
-        return
-    img = Image.open(input_image_path)
-    img = np.array(img)
-    X_img = model_loader.preprocess_image(image=img)
-
-    gbpp = NeuronGuidedBackprop(model, layer)
-    neuron_index_cast = __try_convert_stt_to_int_or_tuple(neuron_index)
-    if neuron_index_cast is None:
-        st.warning("Failed to convert neuron index to int or tuple of ints")
-    attribution = gbpp.attribute(X_img, neuron_selector=neuron_index_cast)
-    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
-    f = __plot(img, attribution_np, flip_axis=False)
-    st.pyplot(f)
-    st.write("Evaluation finished")
-
-
-# Function for IG
-def evaluate_button_ig(
-    input_image_path: str,
-    model_path: str,
-    loader_class_name: str,
-    model_loader_path: str,
-    selected_method,
-    selected_steps,
-):
-    """
-    This method runs the captum algorithm and shows the results.
-
-    Args:
-        model_path (str): Path to the model weights
-        loader_class_name (str): choosen class loader name
-        model_loader_path (str): model loader python file path
-    """
-    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
-    if model is None:
-        st.warning("Failed to load the class from the file. Try loading the file again")
-        return
-    ig = IntegratedGradients(model)
-    img = Image.open(input_image_path)
-    img = np.array(img)  # convert to numpy array
-    X_img = model_loader.preprocess_image(image=img)
-    # method_ig = parameter_selection()
-    attribution = ig.attribute(
-        X_img, target=0, method=selected_method, n_steps=selected_steps
-    )
-    st.write(selected_method)
-    st.write(selected_steps)
-    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
-    f = __plot(img, attribution_np)
-    st.pyplot(f)
-    st.write("Evaluation finished")
-
-
-# demo this only will work for saliency
-def evaluate_button_saliency(
-    input_image_path: str,
-    model_path: str,
-    loader_class_name: str,
-    model_loader_path: str,
-):
-    """
-    This method runs the captum algorithm and shows the results.
-
-    Args:
-        model_path (str): Path to the model weights
-        loader_class_name (str): choosen class loader name
-        model_loader_path (str): model loader python file path
-    """
-    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
-    if model is None:
-        st.warning("Failed to load the class from the file. Try loading the file again")
-        return
-    saliency = Saliency(model)
-    img = Image.open(input_image_path)
-    img = np.array(img)  # convert to numpy array
-    X_img = model_loader.preprocess_image(image=img)
-    attribution = saliency.attribute(X_img, target=0)
-    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), axes=(1, 2, 0))
-    # the original image should have the (H,W,C) format
-    f = __plot(img, attribution_np)
-    st.pyplot(f)  # very nice this plots the plt figure !
-    st.write("Evaluation finished")
-
-
 def __convert_str_to_tuple(str_input: str) -> Tuple[int]:
     """
     Converts a string representation of a tuple of integers into an actual tuple.
@@ -358,90 +220,6 @@ def __try_convert_stt_to_int_or_tuple(str_input: str) -> Optional[int | Tuple[in
         return __convert_str_to_int(str_input)
     except ValueError:
         return __convert_str_to_tuple(str_input)
-
-
-def evaluate_button_neuron_conductance(
-    input_image_path: str,
-    model_path: str,
-    loader_class_name: str,
-    model_loader_path: str,
-    choosen_layer: str,
-    neuron_index: str,
-    target_index: str,
-):
-    """
-    This method runs the captum algorithm and shows the results.
-    Use with DataParallel https://captum.ai/tutorials/Distributed_Attribution
-
-    Args:
-        model_path (str): Path to the model weights
-        loader_class_name (str): chosen class loader name
-        model_loader_path (str): model loader python file path
-    """
-    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
-    layer = load_attribute_from_class(model, choosen_layer)
-    if model is None:
-        st.warning("Failed to load the class from the file. Try loading the file again")
-        return
-    img = Image.open(input_image_path)
-    img = np.array(img)  # convert to numpy array
-    X_img = model_loader.preprocess_image(image=img)
-    ncond = NeuronConductance(model, layer)
-    neuron_index_cast = __try_convert_stt_to_int_or_tuple(neuron_index)
-    if neuron_index_cast is None:
-        st.warning("Failed to convert neuron index to int or tuple of ints")
-    if target_index is None:
-        st.warning("Failed to convert target index to int or tuple of ints")
-        return
-    target_index_cast = __try_convert_stt_to_int_or_tuple(target_index)
-    attribution = ncond.attribute(
-        X_img, neuron_selector=neuron_index_cast, target=target_index_cast
-    )
-    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), axes=(1, 2, 0))
-    f = __plot(img, attribution_np, flip_axis=False)
-    st.pyplot(f)  # very nice this plots the plt figure !
-    st.write("Evaluation finished")
-
-
-def evaluate_button_gradcam(
-    input_image_path: str,
-    model_path: str,
-    loader_class_name: str,
-    model_loader_path: str,
-    choosen_layer: str,
-    target_index: str,
-):
-    """
-    This method runs the captum algorithm and shows the results.
-    Use with DataParallel https://captum.ai/tutorials/Distributed_Attribution
-
-    Args:
-        model_path (str): Path to the model weights
-        loader_class_name (str): chosen class loader name
-        model_loader_path (str): model loader python file path
-    """
-    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
-    layer = load_attribute_from_class(model, choosen_layer)
-    if model is None:
-        st.warning("Failed to load the class from the file. Try loading the file again")
-        return
-    img = Image.open(input_image_path)
-    img = np.array(img)  # convert to numpy array
-    X_img = model_loader.preprocess_image(image=img)
-    guided_gc = GuidedGradCam(model, layer)
-
-    if target_index is None:
-        st.warning("Failed to convert target index to int or tuple of ints")
-        return
-    target_index_cast = __try_convert_stt_to_int_or_tuple(target_index)
-    attribution = guided_gc.attribute(X_img, target_index_cast)
-    attribution_np = np.transpose(
-        attribution.squeeze().detach().cpu().numpy(), axes=(1, 2, 0)
-    )
-    # attribution_np = np.transpose(attribution.squeeze().cpu().numpy())
-    f = __plot(img, attribution_np, flip_axis=False)
-    st.pyplot(f)  # very nice this plots the plt figure !
-    st.write("Evaluation finished")
 
 
 def device_selection():
@@ -538,6 +316,229 @@ def upload_file(
         return None
 
 
+# Funktion for Deconvolution
+def attr_deconvolution(
+    input_image_path: str,
+    model_path: str,
+    loader_class_name: str,
+    model_loader_path: str,
+):
+    """
+    This method runs the captum algorithm and shows the results.
+
+    Args:
+        model_path (str): Path to the model weights
+        loader_class_name (str): choosen class loader name
+        model_loader_path (str): model loader python file path
+    """
+    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
+    if model is None:
+        st.warning("Failed to load the class from the file. Try loading the file again")
+        return
+    deconvolution = Deconvolution(model)
+    img = Image.open(input_image_path)
+    img = np.array(img)  # convert to numpy array
+    X_img = model_loader.preprocess_image(image=img)
+    attribution = deconvolution.attribute(X_img, target=0)
+    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), axes=(1, 2, 0))
+    # the original image should have the (H,W,C) format
+    f = __plot(img, attribution_np, flip_axis=False)
+    st.pyplot(f)
+    st.write("Evaluation finished")
+
+
+# Functin for Neuron BPB
+def attr_guided_backprop(
+    input_image_path: str,
+    model_path: str,
+    loader_class_name: str,
+    model_loader_path,
+    choosen_layer: str,
+    neuron_index,
+):
+    """
+    This method runs the captum algorithm and shows the results.
+
+    Args:
+        model_path (str): Path to the model weights
+        loader_class_name (str): choosen class loader name
+        model_loader_path (str): model loader python file path
+    """
+    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
+    layer = load_attribute_from_class(model, choosen_layer)
+    # layer = load_attribute_from_class(model)
+    if model is None:
+        st.warning("Failed to load the class from the file. Try loading the file again")
+        return
+    img = Image.open(input_image_path)
+    img = np.array(img)
+    X_img = model_loader.preprocess_image(image=img)
+
+    gbpp = NeuronGuidedBackprop(model, layer)
+    neuron_index_cast = __try_convert_stt_to_int_or_tuple(neuron_index)
+    if neuron_index_cast is None:
+        st.warning("Failed to convert neuron index to int or tuple of ints")
+    attribution = gbpp.attribute(X_img, neuron_selector=neuron_index_cast)
+    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
+    f = __plot(img, attribution_np, flip_axis=False)
+    st.pyplot(f)
+    st.write("Evaluation finished")
+
+
+# Function for IG
+def attr_ig(
+    input_image_path: str,
+    model_path: str,
+    loader_class_name: str,
+    model_loader_path: str,
+    selected_method,
+    selected_steps,
+    target_index: str,
+):
+    """
+    This method runs the captum algorithm and shows the results.
+
+    Args:
+        model_path (str): Path to the model weights
+        loader_class_name (str): choosen class loader name
+        model_loader_path (str): model loader python file path
+    """
+    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
+    if model is None:
+        st.warning("Failed to load the class from the file. Try loading the file again")
+        return
+    if target_index is None:
+        st.warning("Failed to convert target index to int or tuple of ints")
+        return
+    target_index_cast = __try_convert_stt_to_int_or_tuple(target_index)
+    ig = IntegratedGradients(model)
+    img = Image.open(input_image_path)
+    img = np.array(img)  # convert to numpy array
+    X_img = model_loader.preprocess_image(image=img)
+    attribution = ig.attribute(
+        X_img, target=target_index_cast, method=selected_method, n_steps=selected_steps
+    )
+    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
+    f = __plot(img, attribution_np)
+    st.pyplot(f)
+    st.write("Evaluation finished")
+
+
+# demo this only will work for saliency
+def attr_saliency(
+    input_image_path: str,
+    model_path: str,
+    loader_class_name: str,
+    model_loader_path: str,
+):
+    """
+    This method runs the captum algorithm and shows the results.
+
+    Args:
+        model_path (str): Path to the model weights
+        loader_class_name (str): choosen class loader name
+        model_loader_path (str): model loader python file path
+    """
+    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
+    if model is None:
+        st.warning("Failed to load the class from the file. Try loading the file again")
+        return
+    saliency = Saliency(model)
+    img = Image.open(input_image_path)
+    img = np.array(img)  # convert to numpy array
+    X_img = model_loader.preprocess_image(image=img)
+    attribution = saliency.attribute(X_img, target=0)
+    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), axes=(1, 2, 0))
+    # the original image should have the (H,W,C) format
+    f = __plot(img, attribution_np)
+    st.pyplot(f)
+    st.write("Evaluation finished")
+
+
+def attr_neuron_conductance(
+    input_image_path: str,
+    model_path: str,
+    loader_class_name: str,
+    model_loader_path: str,
+    choosen_layer: str,
+    neuron_index: str,
+    target_index: str,
+):
+    """
+    This method runs the captum algorithm and shows the results.
+    Use with DataParallel https://captum.ai/tutorials/Distributed_Attribution
+
+    Args:
+        model_path (str): Path to the model weights
+        loader_class_name (str): chosen class loader name
+        model_loader_path (str): model loader python file path
+    """
+    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
+    layer = load_attribute_from_class(model, choosen_layer)
+    if model is None:
+        st.warning("Failed to load the class from the file. Try loading the file again")
+        return
+    img = Image.open(input_image_path)
+    img = np.array(img)  # convert to numpy array
+    X_img = model_loader.preprocess_image(image=img)
+    ncond = NeuronConductance(model, layer)
+    neuron_index_cast = __try_convert_stt_to_int_or_tuple(neuron_index)
+    if neuron_index_cast is None:
+        st.warning("Failed to convert neuron index to int or tuple of ints")
+    if target_index is None:
+        st.warning("Failed to convert target index to int or tuple of ints")
+        return
+    target_index_cast = __try_convert_stt_to_int_or_tuple(target_index)
+    attribution = ncond.attribute(
+        X_img, neuron_selector=neuron_index_cast, target=target_index_cast
+    )
+    attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), axes=(1, 2, 0))
+    f = __plot(img, attribution_np, flip_axis=False)
+    st.pyplot(f)
+    st.write("Evaluation finished")
+
+
+def attr_gradcam(
+    input_image_path: str,
+    model_path: str,
+    loader_class_name: str,
+    model_loader_path: str,
+    choosen_layer: str,
+    target_index: str,
+):
+    """
+    This method runs the captum algorithm and shows the results.
+    Use with DataParallel https://captum.ai/tutorials/Distributed_Attribution
+
+    Args:
+        model_path (str): Path to the model weights
+        loader_class_name (str): chosen class loader name
+        model_loader_path (str): model loader python file path
+    """
+    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
+    layer = load_attribute_from_class(model, choosen_layer)
+    if model is None:
+        st.warning("Failed to load the class from the file. Try loading the file again")
+        return
+    img = Image.open(input_image_path)
+    img = np.array(img)  # convert to numpy array
+    X_img = model_loader.preprocess_image(image=img)
+    guided_gc = GuidedGradCam(model, layer)
+
+    if target_index is None:
+        st.warning("Failed to convert target index to int or tuple of ints")
+        return
+    target_index_cast = __try_convert_stt_to_int_or_tuple(target_index)
+    attribution = guided_gc.attribute(X_img, target_index_cast)
+    attribution_np = np.transpose(
+        attribution.squeeze().detach().cpu().numpy(), axes=(1, 2, 0)
+    )
+    # attribution_np = np.transpose(attribution.squeeze().cpu().numpy())
+    f = __plot(img, attribution_np, flip_axis=False)
+    st.pyplot(f)
+    st.write("Evaluation finished")
+
+
 def main():
     # Layout of the sidebar
     st.sidebar.title("Captum GUI")
@@ -574,7 +575,6 @@ def main():
         available_classes = get_class_names_from_file(model_loader_path)
     # show class dropdown
     loader_class_name = st.selectbox("Select wanted class:", available_classes)
-    st.write("You selected:", loader_class_name)
     if choose_method == Attr.IG.value:
         st.sidebar.subheader("Attribution Method Arguments")
         method_options = [
@@ -584,9 +584,10 @@ def main():
             "riemann_middle",
             "riemann_trapezoid",
         ]
-        selected_method = st.sidebar.selectbox("Integrationsmethode", method_options)
-        selected_steps = st.sidebar.number_input(
-            "Anzahl der Schritte", min_value=1, step=1
+        selected_method = st.sidebar.selectbox("Method", method_options)
+        selected_steps = st.sidebar.number_input("Step count", min_value=1, step=1)
+        target_index = st.sidebar.text_input(
+            "Insert target index (int, tuple[int]):", value="1"
         )
     if choose_method == Attr.NEURON_GUIDED_BACKPROPAGATION.value:
         neuron_index = st.sidebar.text_input(
@@ -648,20 +649,21 @@ def main():
     if col_eval.button("Evaluate"):
         match choose_method:
             case Attr.SALIENCY.value:
-                evaluate_button_saliency(
+                attr_saliency(
                     image_path, model_path, loader_class_name, model_loader_path
                 )
             case Attr.IG.value:
-                evaluate_button_ig(
+                attr_ig(
                     image_path,
                     model_path,
                     loader_class_name,
                     model_loader_path,
                     selected_method,
                     selected_steps,
+                    target_index,
                 )
             case Attr.NEURON_CONDUCTANCE.value:
-                evaluate_button_neuron_conductance(
+                attr_neuron_conductance(
                     image_path,
                     model_path,
                     loader_class_name,
@@ -671,7 +673,7 @@ def main():
                     target_index,
                 )
             case Attr.NEURON_GUIDED_BACKPROPAGATION.value:
-                evaluate_button_guided_backprop(
+                attr_guided_backprop(
                     image_path,
                     model_path,
                     loader_class_name,
@@ -681,13 +683,13 @@ def main():
                 )
 
             case Attr.DECONVOLUTION.value:
-                evaluation_button_deconvolution(
+                attr_deconvolution(
                     image_path, model_path, loader_class_name, model_loader_path
                 )
             case Attr.TCAV_ALG.value:
                 pass
             case Attr.GRADCAM.value:
-                evaluate_button_gradcam(
+                attr_gradcam(
                     image_path,
                     model_path,
                     loader_class_name,
