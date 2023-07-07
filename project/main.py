@@ -1,10 +1,7 @@
 import os
 import pickle
-import uuid
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
-
-import cv2
 import numpy as np
 import streamlit as st
 import torch
@@ -180,11 +177,6 @@ def evaluation_button_deconvolution(
     f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
-    st.write(model, X_img)
-    return model, X_img
-    # prediction = model(X_img)
-    # predicted_class = prediction.argmax(dim=1)
-    # st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
 
 
 # Functin for Neuron BPB
@@ -223,10 +215,6 @@ def evaluate_button_guided_backprop(
     f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)
     st.write("Evaluation finished")
-    label_prediction(model, X_img)
-    # prediction = model(X_img)
-    # predicted_class = prediction.argmax(dim=1)
-    # st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
 
 
 # Function for IG
@@ -264,10 +252,6 @@ def evaluate_button_ig(
     f = __plot(img, attribution_np)
     st.pyplot(f)
     st.write("Evaluation finished")
-    # label_prediction(model, X_img)
-    # prediction = model(X_img)
-    # predicted_class = prediction.argmax(dim=1)
-    # st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
 
 
 # demo this only will work for saliency
@@ -299,10 +283,6 @@ def evaluate_button_saliency(
     f = __plot(img, attribution_np)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
-    # return model, X_img
-    # prediction = model(X_img)
-    # predicted_class = prediction.argmax(dim=1)
-    # st.markdown("<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()), unsafe_allow_html=True)
 
 
 def __convert_str_to_tuple(str_input: str) -> Tuple[int]:
@@ -419,12 +399,6 @@ def evaluate_button_neuron_conductance(
     f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
-    prediction = model(X_img)
-    predicted_class = prediction.argmax(dim=1)
-    st.markdown(
-        "<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()),
-        unsafe_allow_html=True,
-    )
 
 
 def evaluate_button_gradcam(
@@ -466,14 +440,6 @@ def evaluate_button_gradcam(
     f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)  # very nice this plots the plt figure !
     st.write("Evaluation finished")
-    prediction = model(X_img)
-    predicted_class = prediction.argmax(dim=1)
-    st.markdown(
-        "<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()),
-        unsafe_allow_html=True,
-    )
-
-    # Return the predicted class if needed
 
 
 def label_prediction(
@@ -593,19 +559,12 @@ def upload_file(
 
 
 def main():
-    model = None
-    X_img = None
     with st.sidebar.container():
         image = Image.open("D:\\Desktop\\group-1\\project\\build\\captum_logo.png")
         image = image.resize((190, 50))
         st.image(image, use_column_width=True)
-    # Layout of the sidebar
-    # st.sidebar.image("D:\\Desktop\\group-1\\project\\build\\captum_logo.png",use_column_width=True)
-    # st.sidebar.markdown("<h1 style='font-size: 32px;'>Captum GUI</h1>", unsafe_allow_html=True)
-
-    # device = device_selection()  # TODO this still need to be done
     delete_cache()
-
+    predict_checkbox = st.sidebar.checkbox("predict", value=False)
     # upload an image to test
     image_path = upload_file(
         "Upload an image",
@@ -708,7 +667,6 @@ def main():
             choosen_layer = st.sidebar.selectbox("Choose layer:", attr_dict.keys())
             st.sidebar.write(choosen_layer)
     col_eval = st.columns(1)[0]
-
     if col_eval.button("Evaluate"):
         match choose_method:
             case Attr.SALIENCY.value:
@@ -760,43 +718,44 @@ def main():
                 )
             case _:
                 st.write("No method selected")
+        if predict_checkbox:
+            # if choose_method in [
+            #     Attr.NEURON_CONDUCTANCE.value,
+            #     Attr.NEURON_GUIDED_BACKPROPAGATION.value,
+            # ]:
+            #     st.warning("This contribution does not support prediction.")
+            #     pass
+            # else:
+            predicted_class = label_prediction(
+                image_path, model_path, loader_class_name, model_loader_path
+            )
+            st.markdown(
+                "<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()),
+                unsafe_allow_html=True,
+            )
 
-    col_pre = st.columns(1)[0]
-    if col_pre.button("prediction"):
-        predicted_class = label_prediction(
-            image_path, model_path, loader_class_name, model_loader_path
-        )
-        st.markdown(
-            "<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()),
-            unsafe_allow_html=True,
-        )
-    labels = st.sidebar.file_uploader("Choose a json file", accept_multiple_files=False)
-    data = json.load(labels)
-    labels = data["plain_text"]["features"]["label"]["names"]
-    st.sidebar.title("all Classes")
-    for i, label in enumerate(labels):
-        st.sidebar.markdown(f"{label}: {i}")
+    labels = st.sidebar.file_uploader("Choose a JSON file", accept_multiple_files=False)
 
-    # predict = st.sidebar.checkbox("show all Classes")
-    # if predict:
-    #     st.sidebar.markdown(
-    #         """
-    #     <h2>Predict List:</h2>
-    #     <ul>
-    #         <li>airplane: 0</li>
-    #         <li>automobile: 1</li>
-    #         <li>bird: 2</li>
-    #         <li>cat: 3</li>
-    #         <li>deer: 4</li>
-    #         <li>dog: 5</li>
-    #         <li>frog: 6</li>
-    #         <li>horse: 7</li>
-    #         <li>ship: 8</li>
-    #         <li>truck: 9</li>
-    #     </ul>
-    #     """,
-    #         unsafe_allow_html=True,
-    #     )
+    if labels is not None:
+        try:
+            data = json.load(labels)
+            if (
+                "plain_text" in data
+                and "features" in data["plain_text"]
+                and "label" in data["plain_text"]["features"]
+            ):
+                labels = data["plain_text"]["features"]["label"]["names"]
+                st.sidebar.title("All Classes")
+                for i, label in enumerate(labels):
+                    st.sidebar.markdown(f"{label}: {i}")
+            else:
+                st.sidebar.warning(
+                    "Invalid JSON file format. Please upload a JSON file with the correct structure."
+                )
+        except json.JSONDecodeError:
+            st.sidebar.warning("Invalid JSON file. Please upload a valid JSON file.")
+    else:
+        st.sidebar.warning("No file uploaded. Please upload a JSON file.")
 
 
 if __name__ == "__main__":
