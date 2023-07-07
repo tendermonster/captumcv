@@ -1,7 +1,10 @@
+import json
 import os
 import pickle
+import uuid
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
+
 import numpy as np
 import streamlit as st
 import torch
@@ -23,7 +26,6 @@ from captumcv.loaders.util.classLoader import (
     load_class_from_file,
 )
 from captumcv.loaders.util.modelLoader import ImageModelWrapper
-import json
 
 
 class Attr(Enum):
@@ -52,6 +54,13 @@ PATH_MODEL_DEF_PY = (os.path.join(".", "captumcv", "models"),)
 PATH_MODEL_DEF_PY = "".join(PATH_MODEL_DEF_PY)
 
 os.makedirs(CACHE_DIR, exist_ok=True)
+# predict states
+if "predict" not in st.session_state:
+    st.session_state["predict"] = False
+if "predict_checkbox" not in st.session_state:
+    st.session_state["predict_checkbox"] = uuid.uuid4()
+if "class_labels" not in st.session_state:
+    st.session_state["class_labels"] = {}
 
 choose_method = st.selectbox(
     "Choose Attribution Method",
@@ -447,7 +456,7 @@ def label_prediction(
     model_path: str,
     loader_class_name: str,
     model_loader_path: str,
-):
+) -> int:
     """
     This method runs the captum algorithm and shows the results.
 
@@ -459,9 +468,9 @@ def label_prediction(
     model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
     img = np.array(Image.open(input_image_path))
     X_img = model_loader.preprocess_image(image=img)
-    prediction = model(X_img)
-    predicted_class = prediction.argmax(dim=1)
-    return predicted_class
+    prediction: torch.Tensor = model_loader.predict(X_img)
+    predicted_class = prediction.argmax(dim=1).item()
+    return int(predicted_class)
 
 
 def device_selection():
@@ -558,13 +567,14 @@ def upload_file(
         return None
 
 
+def generate_predict_checkbox(id: str):
+    state = st.sidebar.checkbox("predict", key=f"checkbox_{id}")
+    return state
+
+
 def main():
-    with st.sidebar.container():
-        image = Image.open("D:\\Desktop\\group-1\\project\\build\\captum_logo.png")
-        image = image.resize((190, 50))
-        st.image(image, use_column_width=True)
+    st.sidebar.title("CaptumCV")
     delete_cache()
-    predict_checkbox = st.sidebar.checkbox("predict", value=False)
     # upload an image to test
     image_path = upload_file(
         "Upload an image",
@@ -666,6 +676,45 @@ def main():
             attr_dict = __get_model_modules(model)
             choosen_layer = st.sidebar.selectbox("Choose layer:", attr_dict.keys())
             st.sidebar.write(choosen_layer)
+
+    # ------------------------- Predict Checkbox -------------------------
+    st.session_state["predict"] = generate_predict_checkbox(
+        st.session_state["predict_checkbox"]
+    )
+    if st.session_state["predict"]:
+        labels = st.sidebar.file_uploader(
+            "Label file(JSON) optional", accept_multiple_files=False
+        )
+        # the layout of json should be as fallows
+        # {
+        #     "num_classes": 10,
+        #     "classes": [
+        #         "plane",
+        #         "car",
+        #         "cat",
+        #         "..."
+        #     ]
+        # }
+        if labels is not None:
+            try:
+                data = json.load(labels)
+                if "num_classes" not in data or "classes" not in data:
+                    st.sidebar.warning(
+                        "Invalid JSON file format. Please upload a JSON file with the correct structure."
+                    )
+                num_classes = data["num_classes"]
+                classes = data["classes"]
+                if num_classes != len(classes):
+                    st.sidebar.warning(
+                        "Number of classes do not correspond to number of class names."
+                    )
+                for k, v in enumerate(classes):
+                    st.session_state["class_labels"][k] = v
+            except json.JSONDecodeError:
+                st.sidebar.warning(
+                    "Invalid JSON file. Please upload a valid JSON file."
+                )
+    # ------------------------- Predict Checkbox END -------------------------
     col_eval = st.columns(1)[0]
     if col_eval.button("Evaluate"):
         match choose_method:
@@ -718,44 +767,23 @@ def main():
                 )
             case _:
                 st.write("No method selected")
-        if predict_checkbox:
-            # if choose_method in [
-            #     Attr.NEURON_CONDUCTANCE.value,
-            #     Attr.NEURON_GUIDED_BACKPROPAGATION.value,
-            # ]:
-            #     st.warning("This contribution does not support prediction.")
-            #     pass
-            # else:
-            predicted_class = label_prediction(
+        if st.session_state["predict"]:
+            predicted_class: int = label_prediction(
                 image_path, model_path, loader_class_name, model_loader_path
             )
-            st.markdown(
-                "<h2>Vorhersageklasse: {}</h2>".format(predicted_class.item()),
-                unsafe_allow_html=True,
-            )
-
-    labels = st.sidebar.file_uploader("Choose a JSON file", accept_multiple_files=False)
-
-    if labels is not None:
-        try:
-            data = json.load(labels)
-            if (
-                "plain_text" in data
-                and "features" in data["plain_text"]
-                and "label" in data["plain_text"]["features"]
-            ):
-                labels = data["plain_text"]["features"]["label"]["names"]
-                st.sidebar.title("All Classes")
-                for i, label in enumerate(labels):
-                    st.sidebar.markdown(f"{label}: {i}")
-            else:
-                st.sidebar.warning(
-                    "Invalid JSON file format. Please upload a JSON file with the correct structure."
+            if st.session_state["class_labels"]:
+                class_with_name = st.session_state["class_labels"][predicted_class]
+                st.markdown(
+                    "<h3>Prediction: {}({})</h3>".format(
+                        class_with_name, predicted_class
+                    ),
+                    unsafe_allow_html=True,
                 )
-        except json.JSONDecodeError:
-            st.sidebar.warning("Invalid JSON file. Please upload a valid JSON file.")
-    else:
-        st.sidebar.warning("No file uploaded. Please upload a JSON file.")
+            else:
+                st.markdown(
+                    "<h3>Prediction: {}</h3>".format(predicted_class),
+                    unsafe_allow_html=True,
+                )
 
 
 if __name__ == "__main__":
