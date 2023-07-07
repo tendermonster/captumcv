@@ -1,8 +1,0 @@
-**/*.pkl
-**/*.pth
-**/*.zip
-!**/__init__.py
-data/*
-!data/__init__.py
-!model/*__init__.py
-*.zip
