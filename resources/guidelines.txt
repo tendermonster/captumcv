@@ -1,0 +1,30 @@
+# application guidelines sketch
+
+# approximate project structure
+application.py # only is used to initialize the gui and start the local server
+
+captum/ # contains the modified captum implementation that fixed the plotting bug -> dont forget to remove .git folder
+
+models/ # models are places here and than a custom loader is writen to be used by the gui
+    - e.g pytorch_cifar/... #
+
+model_weights/ # should contain the corresponding model weights
+
+loaders/ # contains  # preferably loaders should end with _loader.py to be automatically identified
+    # use this https://docs.python.org/3/library/abc.html
+
+    - abstractModelLoader.py # is an abstract class that requires you to
+    # implement the get_model() -> torch model and get_input(img: ndarray) -> input
+
+    - modelXYZ_loader.py # extends from abstractModelLoader
+
+tests/ # contains unittests for the code
+    -   nice
+
+# GUI REQUIREMENTS
+- draw a layout sketch and place it in the gitlab repo
+- the loaders in loaders/ should be dynamically loaded when gui is started
+    -> use https://stackoverflow.com/questions/547829/how-to-dynamically-load-a-python-class
+- should be possible to upload any image
+    -> the image should be converted to some sort or rbg 3d array that will be passed to the loader class
+- the application should handle errors pretty well like non existing paths, wrong file formats, and so on
