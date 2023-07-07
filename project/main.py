@@ -286,7 +286,7 @@ def delete_files_except_gitkeep(directory):
 
 
 def upload_file(
-    title: str, save_path: str, accept_multiple_files=False
+    title: str, save_path: str, accept_multiple_files=False, key: str = None
 ) -> Optional[str | None]:
     """
     This method asks for a file and saves it to the specified path.
@@ -295,7 +295,14 @@ def upload_file(
         save_path (str): file path to save the uploaded file to.
     """
     cache_file_path = os.path.join(CACHE_DIR, f"{title}.pkl")
-    uploaded_file = st.file_uploader(title, accept_multiple_files=accept_multiple_files)
+    if key is None:
+        uploaded_file = st.file_uploader(
+            title, accept_multiple_files=accept_multiple_files
+        )
+    else:
+        uploaded_file = st.file_uploader(
+            title, accept_multiple_files=accept_multiple_files, key=key
+        )
     if uploaded_file is not None:
         delete_files_except_gitkeep(save_path)
         full_path = os.path.join(save_path, uploaded_file.name)
@@ -304,7 +311,6 @@ def upload_file(
         with open(full_path, "wb") as file:
             file.write(bytes_data)
             file.close()
-
         st.success("File saved successfully")
         # Save data to cache
         with open(cache_file_path, "wb") as cache_file:
@@ -426,7 +432,7 @@ def attr_ig(
         X_img, target=target_index_cast, method=selected_method, n_steps=selected_steps
     )
     attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
-    f = __plot(img, attribution_np)
+    f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)
     st.write("Evaluation finished")
 
@@ -457,7 +463,7 @@ def attr_saliency(
     attribution = saliency.attribute(X_img, target=0)
     attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), axes=(1, 2, 0))
     # the original image should have the (H,W,C) format
-    f = __plot(img, attribution_np)
+    f = __plot(img, attribution_np, flip_axis=True)
     st.pyplot(f)
     st.write("Evaluation finished")
 
@@ -560,12 +566,13 @@ def label_prediction(
         loader_class_name (str): choosen class loader name
         model_loader_path (str): model loader python file path
     """
-    model, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
+    _, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
     img = np.array(Image.open(input_image_path))
     X_img = model_loader.preprocess_image(image=img)
     prediction: torch.Tensor = model_loader.predict(X_img)
     predicted_class = prediction.argmax(dim=1).item()
     return int(predicted_class)
+
 
 def generate_predict_checkbox(id: str):
     state = st.sidebar.checkbox("predict", key=f"checkbox_{id}")
@@ -580,24 +587,28 @@ def main():
         "Upload an image",
         PATH_IMAGE_TMP,
         accept_multiple_files=False,
+        key="image_upload",
     )
     # upload function for the model
     model_path = upload_file(
         "Upload a model(.pth)",
         PATH_MODEL_WEIGHTS,
         accept_multiple_files=False,
+        key="model_upload",
     )
     # upload function for the model
     model_source_path = upload_file(
         "Upload a model def(.py)",
         PATH_MODEL_DEF_PY,
         accept_multiple_files=False,
+        key="model_def_upload",
     )
     # upload model loader
     model_loader_path = upload_file(
         "Upload a model loader file(.py)",
         PATH_MODEL_LOADER,
         accept_multiple_files=False,
+        key="model_loader_upload",
     )
     # get all available classes from the model loader file
     available_classes = []
@@ -674,10 +685,19 @@ def main():
             st.sidebar.write(choosen_layer)
 
     # ------------------------- Predict Checkbox -------------------------
+    st.sidebar.title("Prediction")
     st.session_state["predict"] = generate_predict_checkbox(
         st.session_state["predict_checkbox"]
     )
     if st.session_state["predict"]:
+        st.sidebar.selectbox(
+            "Method (currently supported)",
+            (
+                "Cls",
+                # "Cls/bbox",
+                # "Cls/bbox/seg",
+            ),
+        )
         labels = st.sidebar.file_uploader(
             "Label file(JSON) optional", accept_multiple_files=False
         )
