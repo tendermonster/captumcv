@@ -6,14 +6,25 @@ tinker.py
 misc
 misc/*
 
-captumcv/model_weights_bck/*
+cav
 
-captumcv/image_tmp/*
-!captumcv/image_tmp/.gitkeep
+captumcv/tmp/image/*
+!captumcv/tmp/image/.gitkeep
 
-captumcv/loaders/tmp/*
-!captumcv/loaders/tmp/.gitkeep
+captumcv/tmp/model_loader/*
+!captumcv/tmp/model_loader/.gitkeep
 
-captumcv/models/*
-!captumcv/models/.gitkeep
-!captumcv/models/readme.txt
+captumcv/tmp/model_def/*
+!captumcv/tmp/model_def/.gitkeep
+
+captumcv/tmp/model_weights/*
+!captumcv/tmp/model_weights/.gitkeep
+
+captumcv/tmp/tcav/*
+!captumcv/tmp/tcav/.gitkeep
+
+captumcv/tmp/tcav/concept/*
+!captumcv/tmp/tcav/concept/.gitkeep
+
+captumcv/tmp/tcav/random/*
+!captumcv/tmp/tcav/random/.gitkeep
