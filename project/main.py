@@ -1,3 +1,4 @@
+import json
 import os
 import pickle
 import uuid
@@ -53,6 +54,13 @@ PATH_MODEL_DEF_PY = (os.path.join(".", "captumcv", "tmp", "model_def"),)
 PATH_MODEL_DEF_PY = "".join(PATH_MODEL_DEF_PY)
 
 os.makedirs(CACHE_DIR, exist_ok=True)
+# predict states
+if "predict" not in st.session_state:
+    st.session_state["predict"] = False
+if "predict_checkbox" not in st.session_state:
+    st.session_state["predict_checkbox"] = uuid.uuid4()
+if "class_labels" not in st.session_state:
+    st.session_state["class_labels"] = {}
 
 choose_method = st.selectbox(
     "Choose Attribution Method",
@@ -278,7 +286,7 @@ def delete_files_except_gitkeep(directory):
 
 
 def upload_file(
-    title: str, save_path: str, accept_multiple_files=False
+    title: str, save_path: str, accept_multiple_files=False, key: str = None
 ) -> Optional[str | None]:
     """
     This method asks for a file and saves it to the specified path.
@@ -287,7 +295,14 @@ def upload_file(
         save_path (str): file path to save the uploaded file to.
     """
     cache_file_path = os.path.join(CACHE_DIR, f"{title}.pkl")
-    uploaded_file = st.file_uploader(title, accept_multiple_files=accept_multiple_files)
+    if key is None:
+        uploaded_file = st.file_uploader(
+            title, accept_multiple_files=accept_multiple_files
+        )
+    else:
+        uploaded_file = st.file_uploader(
+            title, accept_multiple_files=accept_multiple_files, key=key
+        )
     if uploaded_file is not None:
         delete_files_except_gitkeep(save_path)
         full_path = os.path.join(save_path, uploaded_file.name)
@@ -296,7 +311,6 @@ def upload_file(
         with open(full_path, "wb") as file:
             file.write(bytes_data)
             file.close()
-
         st.success("File saved successfully")
         # Save data to cache
         with open(cache_file_path, "wb") as cache_file:
@@ -418,7 +432,7 @@ def attr_ig(
         X_img, target=target_index_cast, method=selected_method, n_steps=selected_steps
     )
     attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), (1, 2, 0))
-    f = __plot(img, attribution_np)
+    f = __plot(img, attribution_np, flip_axis=False)
     st.pyplot(f)
     st.write("Evaluation finished")
 
@@ -449,7 +463,7 @@ def attr_saliency(
     attribution = saliency.attribute(X_img, target=0)
     attribution_np = np.transpose(attribution.squeeze().cpu().numpy(), axes=(1, 2, 0))
     # the original image should have the (H,W,C) format
-    f = __plot(img, attribution_np)
+    f = __plot(img, attribution_np, flip_axis=True)
     st.pyplot(f)
     st.write("Evaluation finished")
 
@@ -538,35 +552,63 @@ def attr_gradcam(
     st.write("Evaluation finished")
 
 
-def main():
-    # Layout of the sidebar
-    st.sidebar.title("Captum GUI")
-    # device = device_selection()  # TODO this still need to be done
-    delete_cache()
+def label_prediction(
+    input_image_path: str,
+    model_path: str,
+    loader_class_name: str,
+    model_loader_path: str,
+) -> int:
+    """
+    This method runs the captum algorithm and shows the results.
 
+    Args:
+        model_path (str): Path to the model weights
+        loader_class_name (str): choosen class loader name
+        model_loader_path (str): model loader python file path
+    """
+    _, model_loader = __load_model(model_path, loader_class_name, model_loader_path)
+    img = np.array(Image.open(input_image_path))
+    X_img = model_loader.preprocess_image(image=img)
+    prediction: torch.Tensor = model_loader.predict(X_img)
+    predicted_class = prediction.argmax(dim=1).item()
+    return int(predicted_class)
+
+
+def generate_predict_checkbox(id: str):
+    state = st.sidebar.checkbox("predict", key=f"checkbox_{id}")
+    return state
+
+
+def main():
+    st.sidebar.title("CaptumCV")
+    delete_cache()
     # upload an image to test
     image_path = upload_file(
         "Upload an image",
         PATH_IMAGE_TMP,
         accept_multiple_files=False,
+        key="image_upload",
     )
     # upload function for the model
     model_path = upload_file(
         "Upload a model(.pth)",
         PATH_MODEL_WEIGHTS,
         accept_multiple_files=False,
+        key="model_upload",
     )
     # upload function for the model
     model_source_path = upload_file(
         "Upload a model def(.py)",
         PATH_MODEL_DEF_PY,
         accept_multiple_files=False,
+        key="model_def_upload",
     )
     # upload model loader
     model_loader_path = upload_file(
         "Upload a model loader file(.py)",
         PATH_MODEL_LOADER,
         accept_multiple_files=False,
+        key="model_loader_upload",
     )
     # get all available classes from the model loader file
     available_classes = []
@@ -641,6 +683,54 @@ def main():
             attr_dict = __get_model_modules(model)
             choosen_layer = st.sidebar.selectbox("Choose layer:", attr_dict.keys())
             st.sidebar.write(choosen_layer)
+
+    # ------------------------- Predict Checkbox -------------------------
+    st.sidebar.title("Prediction")
+    st.session_state["predict"] = generate_predict_checkbox(
+        st.session_state["predict_checkbox"]
+    )
+    if st.session_state["predict"]:
+        st.sidebar.selectbox(
+            "Method (currently supported)",
+            (
+                "Cls",
+                # "Cls/bbox",
+                # "Cls/bbox/seg",
+            ),
+        )
+        labels = st.sidebar.file_uploader(
+            "Label file(JSON) optional", accept_multiple_files=False
+        )
+        # the layout of json should be as fallows
+        # {
+        #     "num_classes": 10,
+        #     "classes": [
+        #         "plane",
+        #         "car",
+        #         "cat",
+        #         "..."
+        #     ]
+        # }
+        if labels is not None:
+            try:
+                data = json.load(labels)
+                if "num_classes" not in data or "classes" not in data:
+                    st.sidebar.warning(
+                        "Invalid JSON file format. Please upload a JSON file with the correct structure."
+                    )
+                num_classes = data["num_classes"]
+                classes = data["classes"]
+                if num_classes != len(classes):
+                    st.sidebar.warning(
+                        "Number of classes do not correspond to number of class names."
+                    )
+                for k, v in enumerate(classes):
+                    st.session_state["class_labels"][k] = v
+            except json.JSONDecodeError:
+                st.sidebar.warning(
+                    "Invalid JSON file. Please upload a valid JSON file."
+                )
+    # ------------------------- Predict Checkbox END -------------------------
     col_eval = st.columns(1)[0]
     if col_eval.button("Evaluate"):
         match choose_method:
@@ -677,7 +767,6 @@ def main():
                     choosen_layer,
                     neuron_index,
                 )
-
             case Attr.DECONVOLUTION.value:
                 attr_deconvolution(
                     image_path, model_path, loader_class_name, model_loader_path
@@ -695,6 +784,23 @@ def main():
                 )
             case _:
                 st.write("No method selected")
+        if st.session_state["predict"]:
+            predicted_class: int = label_prediction(
+                image_path, model_path, loader_class_name, model_loader_path
+            )
+            if st.session_state["class_labels"]:
+                class_with_name = st.session_state["class_labels"][predicted_class]
+                st.markdown(
+                    "<h3>Prediction: {}({})</h3>".format(
+                        class_with_name, predicted_class
+                    ),
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.markdown(
+                    "<h3>Prediction: {}</h3>".format(predicted_class),
+                    unsafe_allow_html=True,
+                )
 
 
 if __name__ == "__main__":

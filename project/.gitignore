@@ -6,11 +6,13 @@ tinker.py
 misc
 misc/*
 
+cav
+
 captumcv/tmp/image/*
 !captumcv/tmp/image/.gitkeep
 
-captumcv/tmp/model_loaders/*
-!captumcv/tmp/model_loaders/.gitkeep
+captumcv/tmp/model_loader/*
+!captumcv/tmp/model_loader/.gitkeep
 
 captumcv/tmp/model_def/*
 !captumcv/tmp/model_def/.gitkeep
