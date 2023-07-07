@@ -2,6 +2,7 @@ import json
 import os
 import pickle
 import uuid
+import stat
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
@@ -264,6 +265,20 @@ def delete_cache():
         st.sidebar.text("Cache deleted")
 
 
+def rmtree(top):
+    # some work around to access paths on Windows (access denied)
+    # https://stackoverflow.com/questions/2656322/shutil-rmtree-
+    # fails-on-windows-with-access-is-denied
+    for root, dirs, files in os.walk(top, topdown=False):
+        for name in files:
+            filename = os.path.join(root, name)
+            os.chmod(filename, stat.S_IWUSR)
+            os.remove(filename)
+        for name in dirs:
+            os.rmdir(os.path.join(root, name))
+    os.rmdir(top)
+
+
 def delete_files_except_gitkeep(directory):
     """
     Deletes files in a directory, except for the ".gitkeep" file.
@@ -274,15 +289,25 @@ def delete_files_except_gitkeep(directory):
     Returns:
         None
     """
-    for root, dirs, files in os.walk(directory):
-        for file in files:
-            if file != ".gitkeep":
-                file_path = os.path.join(root, file)
-                os.remove(file_path)
+    if os.name == "nt":
+        for root, dirs, files in os.walk(directory, topdown=False):
+            for file in files:
+                if file != ".gitkeep":
+                    filename = os.path.join(root, file)
+                    os.chmod(filename, stat.S_IWUSR)
+                    os.remove(filename)
+            for file in dirs:
+                os.rmdir(os.path.join(root, file))
+    else:
+        for root, dirs, files in os.walk(directory):
+            for file in files:
+                if file != ".gitkeep":
+                    file_path = os.path.join(root, file)
+                    os.remove(file_path)
 
-        for dir in dirs:
-            dir_path = os.path.join(root, dir)
-            delete_files_except_gitkeep(dir_path)
+            for dir in dirs:
+                dir_path = os.path.join(root, dir)
+                delete_files_except_gitkeep(dir_path)
 
 
 def upload_file(
