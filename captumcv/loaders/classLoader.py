@@ -1,9 +1,6 @@
 import ast
 import importlib.util
-import typing
 from typing import Any, List
-
-from captumcv.loaders.modelLoader import ImageModelWrapper
 
 
 def load_class_from_file(file_path: str, class_name: str) -> Any:

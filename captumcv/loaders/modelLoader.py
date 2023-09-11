@@ -1,7 +1,6 @@
 import os
 from typing import List
 
-import PIL
 import torch
 import torch.backends.cudnn as cudnn
 import torchvision.transforms as transforms
@@ -26,6 +25,7 @@ class ImageModelWrapper(object):
         model_path: str,
         model,
         normalization_params,
+        net_keyword=None,
     ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # loaded model
@@ -35,10 +35,43 @@ class ImageModelWrapper(object):
         self.model_path = model_path
         self.normalization_params = normalization_params
         if model_path and os.path.exists(model_path):
-            self.__try_loading_model(model_path)
+            self.__try_loading_model(model_path, net_keyword)
             # else:
             # raise Exception("Model path does not exist")
         # shape of the input image in this model
+
+    def __try_loading_model(self, model_path: str, net_keyword=None):
+        """
+        Tries to load the model from the provided model path.
+
+        Args:
+            model_path (str): Path to the model file.
+            net_keyword (str): Keyword for the model in the model file.
+        Returns:
+            None
+        """
+        self.model = self.model.to(self.device)
+        try:
+            # todo do some checks if file exists or so
+            if self.device == "cuda":
+                self.model = torch.nn.DataParallel(self.model)
+                cudnn.benchmark = True
+                model_load = torch.load(model_path)
+            else:
+                # see this https://discuss.pytorch.org/t/solved-keyerror-unexpected-key-module-encoder-embedding-weight-in-state-dict/1686
+                self.model = torch.nn.DataParallel(self.model)
+                model_load = torch.load(
+                    model_path, map_location=torch.device(self.device)
+                )
+            # sometimes people like to serialize additional information along their model like accuracy or other things
+            # so the user can additionally pass the dictionary keyword for loading model parameters
+            if net_keyword:
+                self.model.load_state_dict(model_load[net_keyword])
+            else:
+                self.model.load_state_dict(model_load)
+            self.model.eval()
+        except Exception as e:
+            print(e)
 
     def change_device(self, device: str):
         """
@@ -101,34 +134,6 @@ class ImageModelWrapper(object):
         transformed_image = transform_test(image)
         reshaped_image = torch.reshape(transformed_image, self.get_input_shape())
         return reshaped_image
-
-    def __try_loading_model(self, model_path: str):
-        """
-        Tries to load the model from the provided model path.
-
-        Args:
-            model_path (str): Path to the model file.
-
-        Returns:
-            None
-        """
-        self.model = self.model.to(self.device)
-        try:
-            # todo do some checks if file exists or so
-            if self.device == "cuda":
-                self.model = torch.nn.DataParallel(self.model)
-                cudnn.benchmark = True
-                model_load = torch.load(model_path)
-            else:
-                # see this https://discuss.pytorch.org/t/solved-keyerror-unexpected-key-module-encoder-embedding-weight-in-state-dict/1686
-                self.model = torch.nn.DataParallel(self.model)
-                model_load = torch.load(
-                    model_path, map_location=torch.device(self.device)
-                )
-            self.model.load_state_dict(model_load["net"])
-            self.model.eval()
-        except Exception as e:
-            print(e)
 
     def get_input_shape(self):
         """

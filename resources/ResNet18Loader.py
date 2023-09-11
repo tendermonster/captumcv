@@ -35,7 +35,7 @@ class ResNet18Loader(ImageModelWrapper):
             "std": (0.2023, 0.1994, 0.2010),
         }  # define normalization params here -> the variable name must be "normalization_params"
         super(ResNet18Loader, self).__init__(
-            input_shape, target_image_shape, model_path, model, normalization_params
+            input_shape, target_image_shape, model_path, model, normalization_params, net_keyword="net"
         )
 
     # custom preprocess_image method can be defined here
