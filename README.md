@@ -1,11 +1,6 @@
 # Captumcv frontend for captum for working with computer vision models
 
-This is a frontend for the captum library for working with computer vision models.
-The frontend is written in streamlit and is used to visualize the results of the captum library.
-
-## Introduction
-
-Provide a brief introduction to your project, highlighting its purpose and key features. Explain why users might find it useful or interesting.
+This project aims to provide an intuitive way of using different Explainable AI methods to analyst computer vision models.
 
 ## Requirements
 
